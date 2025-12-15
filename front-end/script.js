@@ -16,13 +16,13 @@ function getCharSize()
     span.textContent = 'M'; // Random char (the font is monospace) 
     document.body.appendChild(span);
     const width = span.getBoundingClientRect().width;
-    const height = parseInt(getComputedStyle(textArea).lineHeight);
+    const height = parseFloat(getComputedStyle(textArea).lineHeight);
     document.body.removeChild(span);
     return { width, height };
 }
 
 const { width: textAreaWidth, height: textAreaHeight } = container.getBoundingClientRect();
-const textAreaPadding = parseInt(getComputedStyle(textArea).paddingTop); 
+const textAreaPadding = parseFloat(getComputedStyle(textArea).paddingTop); 
 const charSize = getCharSize();
 const charsPerRow = Math.floor((textAreaWidth - 2 * textAreaPadding) / charSize.width);
 
@@ -47,7 +47,7 @@ const colors = [
   '#F4E1D2' 
 ];
 
-let activeUsers = [];
+let activeCursors = [];
 
 function createRemoteCursor(username) 
 {
@@ -56,43 +56,134 @@ function createRemoteCursor(username)
     cursor.className = 'remote-cursor';
     cursor.setAttribute('data-username', username);
     overlay.appendChild(cursor);
-    cursor.style.backgroundColor = colors[activeUsers.length % colors.length];
-    activeUsers.push(username);
+    cursor.style.backgroundColor = colors[activeCursors.length % colors.length];
+    activeCursors.push(cursor);
 }
 
 function deleteRemoteCursor(username) 
 {
     const cursor = document.getElementById(`cursor-${username}`);
+    const index = activeCursors.indexOf(cursor);
     if (cursor) { cursor.remove(); }
-    const index = activeUsers.indexOf(username);
-    if (index > -1) { activeUsers.splice(index, 1); }
+    if (index > -1) { activeCursors.splice(index, 1); }
 }
 
 function updateRemoteCursor(username, charIndex) 
 {
-    let cursor = document.getElementById(`cursor-${username}`);
-    if (!cursor) { console.error(`Error moving remote cursor: cursor-${username} does not exist`); }
+    const cursor = document.getElementById(`cursor-${username}`);
+    if (!cursor) { console.warn(`Unable to move a remote cursor: cursor-${username} does not exist`); }
+    if (charIndex < 0 || charIndex > textArea.value.length) { 
+        console.warn(`Unable to move a remote cursor: expected a charIndex between 0 and ${textArea.value.length}, got ${charIndex} instead`); }
+
+    //const textBefore = textArea.value.slice(0, charIndex);
+    //const newlineCount = textBefore.split('\n').length - 1;
+
+    //const replacementSpaces = ' '.repeat(charsPerRow);
+    //const flattenedTextArea = textBefore.value.replace(/\n/g, replacementSpaces);
 
     const rowIndex = Math.floor(charIndex / charsPerRow);
     const colIndex = charIndex % charsPerRow;
-
-
     const top = (rowIndex * charSize.height) + textAreaPadding; 
     const left = (colIndex * charSize.width) + textAreaPadding;
 
-    console.log(`Moving ${username} at index ${charIndex} {row: ${rowIndex}, col: ${colIndex}} -> {top: ${top}px, left: ${left}px}`);
-    
     cursor.style.top = `${top}px`;
     cursor.style.left = `${left}px`;
+
+    console.log(`Moved ${username} at index ${charIndex} {row: ${rowIndex}, col: ${colIndex}} -> {top: ${top}px, left: ${left}px}`);
+}
+
+function decrementCursors()
+{
+    const delta = charSize.width / 2;
+    for (const cursor of activeCursors)
+    {
+        const left = parseFloat(cursor.style.left) - charSize.width;
+        const top = parseFloat(cursor.style.top) - charSize.height;
+       
+        // Same row
+        if (left > textAreaPadding - delta) 
+        { 
+            cursor.style.left = `${left}px`;
+            continue; 
+        }
+
+        // Back to the first character
+        if (top < textAreaPadding - delta)
+        {
+            cursor.style.left = `${textAreaPadding}px`;
+            cursor.style.top = `${textAreaPadding}px`;
+            continue;
+        }
+
+        // Upper row
+        cursor.style.left = `${charSize.width * charsPerRow}px`;
+        cursor.style.top = `${top}px`;
+    }
+}
+
+function incrementCursors()
+{
+    const delta = charSize.width / 2;
+    for (const cursor of activeCursors)
+    {
+        const left = parseFloat(cursor.style.left) + charSize.width;
+
+        // Same row
+        console.log(left, charsPerRow, charsPerRow * charSize.width, charsPerRow * charSize.width + delta, left < (charsPerRow * charSize.width + delta)); 
+        if (left < (charsPerRow * charSize.width + delta)) 
+        { 
+            cursor.style.left = `${left}px`;
+            continue; 
+        }
+
+        // Lower row
+        cursor.style.left = `${textAreaPadding}px`;
+        cursor.style.top = `${parseFloat(cursor.style.top) + charSize.height}px`;
+    }
+}
+
+function processIncomingRequest(username, action, character, index) 
+{
+    const currentContent = textArea.value;
+    let newContent = currentContent;
+
+    switch (action) 
+    {
+        case 'CREATE':
+            newContent = currentContent.slice(0, index) + character + currentContent.slice(index);
+            incrementCursors();
+            break;
+        case 'UPDATE':
+            newContent = currentContent.slice(0, index) + character + currentContent.slice(index + 1);
+            break;
+        case 'DELETE':
+            newContent = currentContent.slice(0, index) + currentContent.slice(index + 1);
+            decrementCursors();
+            break;
+        default:
+            console.warn(`Received unknown action '${action}' from user '${username}'`);
+            return;
+    }
+
+    console.log(`${username} ${action} character '${character}' at indxe ${index}`);
+
+    myTextArea.value = newContent;
+
 }
 
 // TODO: DEMO - Remove in production
 createRemoteCursor('User0');
 createRemoteCursor('User1');
 createRemoteCursor('User2');
+
+updateRemoteCursor('User0', Math.floor(Math.random() * textArea.value.length));
+updateRemoteCursor('User1', Math.floor(Math.random() * textArea.value.length));
+updateRemoteCursor('User2', Math.floor(Math.random() * textArea.value.length));
+
 setInterval(() => {
+    return;
     updateRemoteCursor('User0', Math.floor(Math.random() * textArea.value.length));
     updateRemoteCursor('User1', Math.floor(Math.random() * textArea.value.length));
     updateRemoteCursor('User2', Math.floor(Math.random() * textArea.value.length));
-}, 1000);
+}, 500);
 
