@@ -2,12 +2,6 @@ const CONTAINER = document.getElementById('editor-container');
 const TEXT_AREA = document.getElementById('textarea');
 const OVERLAY = document.getElementById('overlay');
 
-// Sync TEXT_AREA and OVERLAY vertical scrolls
-// FIXME:
-TEXT_AREA.addEventListener('scroll', () => {
-    OVERLAY.scrollTop = TEXT_AREA.scrollTop;
-});
-
 // Computes the width and height in pixels of a single character
 function _computeCharSizePx() 
 {
@@ -31,6 +25,22 @@ CONTAINER.style.width = `${COLS * CHAR_SIZE.width + PADDING * 2}px`;
 CONTAINER.style.height = `${ROWS * CHAR_SIZE.height + PADDING * 2}px`;
 TEXT_AREA.style.padding = `${PADDING}px`;
 OVERLAY.style.padding = `${PADDING}px`;
+
+// Dummy cursor that stretches the overlay thus enabling cursors scrolling sync 
+const STRETCHER = document.createElement('div');
+STRETCHER.className = 'remote-cursor';
+STRETCHER.style.visibility = 'hidden';
+OVERLAY.appendChild(STRETCHER);
+
+TEXT_AREA.addEventListener('scroll', () => {
+    OVERLAY.scrollTop = TEXT_AREA.scrollTop;
+});
+
+TEXT_AREA.addEventListener('input', () => {
+    updateRemoteCursor(STRETCHER, TEXT_AREA.value.length);
+    // Add the padding to fully reach the bottom of the text area
+    STRETCHER.style.top = `${parseInt(STRETCHER.style.top) + PADDING}px`;
+});
 
 console.log(`Loaded TEXT_AREA {
     rows: ${ROWS},
@@ -105,12 +115,23 @@ function deleteRemoteCursor(username)
     if (index > -1) { ACTIVE_CURSORS.splice(index, 1); }
 }
 
-function updateRemoteCursor(username, charIndex) 
+function updateRemoteCursorByName(username, charIndex)
 {
     const cursor = document.getElementById(`cursor-${username}`);
-    if (!cursor) { console.warn(`Unable to move a remote cursor: cursor-${username} does not exist`); }
+    if (!cursor) { 
+        console.warn(`Unable to move a remote cursor: cursor-${username} does not exist`); 
+        return;
+    }
+    updateRemoteCursor(cursor, charIndex);
+}
+
+function updateRemoteCursor(cursor, charIndex) 
+{
     if (charIndex < 0 || charIndex > TEXT_AREA.value.length) { 
-        console.warn(`Unable to move a remote cursor: expected a charIndex between 0 and ${TEXT_AREA.value.length}, got ${charIndex} instead`); }
+        console.warn(`Unable to move a remote cursor: 
+            expected a charIndex between 0 and ${TEXT_AREA.value.length}, got ${charIndex} instead`); 
+        return;
+    }
     
     cursor.setAttribute('data-index', charIndex);
 
@@ -118,7 +139,7 @@ function updateRemoteCursor(username, charIndex)
     cursor.style.top = `${top}px`;
     cursor.style.left = `${left}px`;
 
-    console.log(`Moved ${username} at index ${charIndex} -> {top: ${top}px, left: ${left}px}`);
+    console.log(`Moved ${cursor.getAttribute('data-username')} at index ${charIndex} -> {top: ${top}px, left: ${left}px}`);
 }
 
 // Increments all the cursors above a certain character
@@ -126,9 +147,8 @@ function incrementCursors(thresholdIndex) {
     for (const cursor of ACTIVE_CURSORS) {
         let currentIndex = parseInt(cursor.getAttribute('data-index') || '0');
         if (currentIndex >= thresholdIndex) {
-            const username = cursor.getAttribute('data-username');
             const newIndex = Math.min(TEXT_AREA.value.length, currentIndex + 1);
-            updateRemoteCursor(username, newIndex);
+            updateRemoteCursor(cursor, newIndex);
         }
     }
 }
@@ -138,13 +158,13 @@ function decrementCursors(thresholdIndex) {
     for (const cursor of ACTIVE_CURSORS) {
         let currentIndex = parseInt(cursor.getAttribute('data-index') || '0');
         if (currentIndex > thresholdIndex) {
-            const username = cursor.getAttribute('data-username');
             const newIndex = Math.max(0, currentIndex - 1);
-            updateRemoteCursor(username, newIndex);
+            updateRemoteCursor(cursor, newIndex);
         }
     }
 }
 
+// FIXME:
 function processIncomingRequest(username, action, character, index) 
 {
     const currentContent = TEXT_AREA.value;
@@ -179,15 +199,12 @@ createRemoteCursor('User2');
 
 function randomCursors() 
 {
-    updateRemoteCursor('User0', Math.floor(Math.random() * TEXT_AREA.value.length));
-    updateRemoteCursor('User1', Math.floor(Math.random() * TEXT_AREA.value.length));
-    updateRemoteCursor('User2', Math.floor(Math.random() * TEXT_AREA.value.length));
+    updateRemoteCursorByName('User0', Math.floor(Math.random() * TEXT_AREA.value.length));
+    updateRemoteCursorByName('User1', Math.floor(Math.random() * TEXT_AREA.value.length));
+    updateRemoteCursorByName('User2', Math.floor(Math.random() * TEXT_AREA.value.length));
 }
 
 setInterval(() => {
-    return;
-    updateRemoteCursor('User0', Math.floor(Math.random() * TEXT_AREA.value.length));
-    updateRemoteCursor('User1', Math.floor(Math.random() * TEXT_AREA.value.length));
-    updateRemoteCursor('User2', Math.floor(Math.random() * TEXT_AREA.value.length));
-}, 5000);
+    randomCursors();
+}, 3000);
 

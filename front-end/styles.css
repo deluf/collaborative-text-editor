@@ -30,8 +30,9 @@ body {
     line-height: var(--line-height);
     /* break words exactly at the textarea right border, not before */
     word-break: break-all;     
-    /* Hide scrollbars */
-    overflow: hidden;
+    /* Only show vertical scroll bar */ 
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 #textarea {
@@ -64,7 +65,7 @@ body {
     content: attr(data-username);
     top: calc(0px - var(--line-height));
     left: 0;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: bold;
     background-color: inherit;
     /* Makes it as wide as the username */
