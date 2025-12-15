@@ -1,0 +1,67 @@
+/* 1. The Container: Holds both layers in place */
+#editor-container {
+    position: relative;
+    width: 800px;
+    height: 500px;
+}
+
+/* 2. Shared Styles: Both layers must match EXACTLY */
+.editor-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 10px; /* Padding must match */
+    border: 1px solid #333;
+    box-sizing: border-box;
+    
+    /* CRITICAL: Enforce grid metrics */
+    font-family: 'Courier New', monospace; 
+    font-size: 16px;
+    line-height: 20px;
+    word-break: break-all;
+    overflow: auto;   /* Scrollbars */
+}
+
+/* 3. The Input: The actual textarea */
+textarea#input-area {
+    z-index: 1;
+    background: transparent;
+    color: #ccc;
+    background-color: #1e1e1e;
+    resize: none;
+    outline: none;
+}
+
+/* 4. The Overlay: Holds the remote cursors */
+#cursor-overlay {
+    z-index: 2; /* Sits on top */
+    pointer-events: none; /* Let clicks pass through to textarea */
+    background: transparent;
+    overflow: hidden; /* Hide scrollbars, we sync via JS */
+}
+
+/* The Remote Cursor Visual */
+.remote-cursor {
+    position: absolute;
+    width: 2px;
+    height: 20px; /* Matches line-height */
+    background-color: #ff00ff; /* Magenta cursor */
+    transition: all 0.1s ease;
+}
+
+.remote-cursor::after {
+    /* Optional: Name tag above cursor */
+    content: attr(data-user);
+    position: absolute;
+    top: -15px;
+    left: 0;
+    background: #ff00ff;
+    color: black;
+    font-size: 10px;
+    padding: 1px 3px;
+    width: 100px;
+}
+
