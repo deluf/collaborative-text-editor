@@ -13,8 +13,6 @@ body {
 
 #editor-container {
     position: relative;
-    width: 800px;
-    height: 500px;
 }
 
 .editor-layer {
@@ -24,30 +22,31 @@ body {
     width: 100%;
     height: 100%;
     margin: 0;
-    padding: 10px;
     border: 1px solid #333;
     box-sizing: border-box;
-    
-    /* CRITICAL: Enforce grid metrics */
+    /* Font family is critical - it must be monospace */ 
     font-family: 'Courier New', monospace; 
     font-size: 16px;
     line-height: var(--line-height);
-    word-break: break-all; /* break words exactly at the textarea right border, not before */
-    overflow: auto;   /* Scrollbars */
+    /* break words exactly at the textarea right border, not before */
+    word-break: break-all;     
+    /* Hide scrollbars */
+    overflow: hidden;
 }
 
-textarea#input-area {
+#textarea {
     z-index: 1;
     background: transparent;
     resize: none;
     outline: none;
 }
 
-/* 4. The Overlay: Holds the remote cursors */
-#cursor-overlay {
-    z-index: 2; /* Sits on top */
-    pointer-events: none; /* Let clicks pass through to textarea */
-    overflow: hidden; /* Hide scrollbars */
+/* Holds the remote cursors */
+#overlay {
+    /* Sits on top */
+    z-index: 2; 
+    /* Let clicks pass through to textarea */
+    pointer-events: none;
 }
 
 /* Remote cursor (a vertical line) */
@@ -68,7 +67,7 @@ textarea#input-area {
     font-size: 12px;
     font-weight: bold;
     background-color: inherit;
-    /* Make it as wide as the username */
+    /* Makes it as wide as the username */
     white-space: nowrap;
     padding: 0 5px 0 5px;
 }
