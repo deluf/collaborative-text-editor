@@ -1,61 +1,98 @@
-const textarea = document.getElementById('input-area');
+const container = document.getElementById('editor-container');
+const textArea = document.getElementById('input-area');
 const overlay = document.getElementById('cursor-overlay');
 
+// Sync textArea and overlay vertical scrolls
+textArea.addEventListener('scroll', () => {
+    overlay.scrollTop = textArea.scrollTop;
+});
+
 // Computes the width and height in pixels of a single character
-function getCharSize() {
+function getCharSize() 
+{
     const span = document.createElement('span');
-    span.style.font = getComputedStyle(textarea).font;
+    span.style.font = getComputedStyle(textArea).font;
     span.style.visibility = 'hidden';
     span.textContent = 'M'; // Random char (the font is monospace) 
     document.body.appendChild(span);
     const width = span.getBoundingClientRect().width;
-    const height = parseInt(getComputedStyle(textarea).lineHeight);
+    const height = parseInt(getComputedStyle(textArea).lineHeight);
     document.body.removeChild(span);
     return { width, height };
 }
 
+const { width: textAreaWidth, height: textAreaHeight } = container.getBoundingClientRect();
+const textAreaPadding = parseInt(getComputedStyle(textArea).paddingTop); 
 const charSize = getCharSize();
-const charsPerRow = Math.floor((800 - 20) / charSize.width);
+const charsPerRow = Math.floor((textAreaWidth - 2 * textAreaPadding) / charSize.width);
 
-console.log(`Char size: ${charSize}`);
-console.log(`Chars per row: ${charsPerRow}`);
+console.log(`Loaded textArea {
+    width: ${textAreaWidth}, 
+    height: ${textAreaHeight}, 
+    padding: ${textAreaPadding},
+    charSize: ${charSize.width} x ${charSize.height},
+    charsPerRow: ${charsPerRow}
+}`);
 
-// Sync textarea and overlay vertical scrolls
-textarea.addEventListener('scroll', () => {
-    overlay.scrollTop = textarea.scrollTop;
-});
+const colors = [
+  '#FFADAD', 
+  '#CAFFBF',
+  '#A0C4FF',
+  '#D4F0F0',
+  '#BDB2FF',
+  '#FFD6A5',
+  '#9BF6FF',
+  '#FDFFB6',
+  '#FFC6FF',
+  '#F4E1D2' 
+];
 
-// Renders a remote cursor
-function updateRemoteCursor(userId, textIndex) {
-    let cursor = document.getElementById(`cursor-${userId}`);
+let activeUsers = [];
+
+function createRemoteCursor(username) 
+{
+    cursor = document.createElement('div');
+    cursor.id = `cursor-${username}`;
+    cursor.className = 'remote-cursor';
+    cursor.setAttribute('data-username', username);
+    overlay.appendChild(cursor);
+    cursor.style.backgroundColor = colors[activeUsers.length % colors.length];
+    activeUsers.push(username);
+}
+
+function deleteRemoteCursor(username) 
+{
+    const cursor = document.getElementById(`cursor-${username}`);
+    if (cursor) { cursor.remove(); }
+    const index = activeUsers.indexOf(username);
+    if (index > -1) { activeUsers.splice(index, 1); }
+}
+
+function updateRemoteCursor(username, charIndex) 
+{
+    let cursor = document.getElementById(`cursor-${username}`);
+    if (!cursor) { console.error(`Error moving remote cursor: cursor-${username} does not exist`); }
+
+    const rowIndex = Math.floor(charIndex / charsPerRow);
+    const colIndex = charIndex % charsPerRow;
+
+
+    const top = (rowIndex * charSize.height) + textAreaPadding; 
+    const left = (colIndex * charSize.width) + textAreaPadding;
+
+    console.log(`Moving ${username} at index ${charIndex} {row: ${rowIndex}, col: ${colIndex}} -> {top: ${top}px, left: ${left}px}`);
     
-    // Create the cursor if it doesn't exist
-    if (!cursor) {
-        cursor = document.createElement('div');
-        cursor.id = `cursor-${userId}`;
-        cursor.className = 'remote-cursor';
-        cursor.setAttribute('data-user', userId);
-        overlay.appendChild(cursor);
-    }
-
-    console.log(`Drawing ${userId} at index ${textIndex}`);
-
-    const rowIndex = Math.floor(textIndex / charsPerRow);
-    const colIndex = textIndex % charsPerRow;
-
-    console.log(`Result: rowIndex ${rowIndex}, colIndex ${colIndex}`);
-
-    // Math: Grid coordinates -> Pixels
-    // We add 10px padding because of the CSS padding
-    const top = (rowIndex * charSize.height) + 10; 
-    const left = (colIndex * charSize.width) + 10;
-
     cursor.style.top = `${top}px`;
     cursor.style.left = `${left}px`;
 }
 
-// DEMO - Another user moves its cursor around
+// TODO: DEMO - Remove in production
+createRemoteCursor('User0');
+createRemoteCursor('User1');
+createRemoteCursor('User2');
 setInterval(() => {
-    updateRemoteCursor('UserB', Math.floor(Math.random() * textarea.value.length));
+    updateRemoteCursor('User0', Math.floor(Math.random() * textArea.value.length));
+    updateRemoteCursor('User1', Math.floor(Math.random() * textArea.value.length));
+    updateRemoteCursor('User2', Math.floor(Math.random() * textArea.value.length));
 }, 1000);
 

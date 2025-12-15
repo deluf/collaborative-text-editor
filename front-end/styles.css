@@ -1,11 +1,22 @@
-/* 1. The Container: Holds both layers in place */
+
+:root {
+    --line-height: 20px;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+}
+
 #editor-container {
     position: relative;
     width: 800px;
     height: 500px;
 }
 
-/* 2. Shared Styles: Both layers must match EXACTLY */
 .editor-layer {
     position: absolute;
     top: 0;
@@ -13,24 +24,21 @@
     width: 100%;
     height: 100%;
     margin: 0;
-    padding: 10px; /* Padding must match */
+    padding: 10px;
     border: 1px solid #333;
     box-sizing: border-box;
     
     /* CRITICAL: Enforce grid metrics */
     font-family: 'Courier New', monospace; 
     font-size: 16px;
-    line-height: 20px;
-    word-break: break-all;
+    line-height: var(--line-height);
+    word-break: break-all; /* break words exactly at the textarea right border, not before */
     overflow: auto;   /* Scrollbars */
 }
 
-/* 3. The Input: The actual textarea */
 textarea#input-area {
     z-index: 1;
     background: transparent;
-    color: #ccc;
-    background-color: #1e1e1e;
     resize: none;
     outline: none;
 }
@@ -39,29 +47,29 @@ textarea#input-area {
 #cursor-overlay {
     z-index: 2; /* Sits on top */
     pointer-events: none; /* Let clicks pass through to textarea */
-    background: transparent;
-    overflow: hidden; /* Hide scrollbars, we sync via JS */
+    overflow: hidden; /* Hide scrollbars */
 }
 
-/* The Remote Cursor Visual */
+/* Remote cursor (a vertical line) */
 .remote-cursor {
     position: absolute;
     width: 2px;
-    height: 20px; /* Matches line-height */
-    background-color: #ff00ff; /* Magenta cursor */
+    height: var(--line-height); 
+    opacity: 0.8;
     transition: all 0.1s ease;
 }
 
+/* Name tag above the remote cursor */
 .remote-cursor::after {
-    /* Optional: Name tag above cursor */
-    content: attr(data-user);
     position: absolute;
-    top: -15px;
+    content: attr(data-username);
+    top: calc(0px - var(--line-height));
     left: 0;
-    background: #ff00ff;
-    color: black;
-    font-size: 10px;
-    padding: 1px 3px;
-    width: 100px;
+    font-size: 12px;
+    font-weight: bold;
+    background-color: inherit;
+    /* Make it as wide as the username */
+    white-space: nowrap;
+    padding: 0 5px 0 5px;
 }
 
