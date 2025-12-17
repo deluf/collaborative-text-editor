@@ -36,10 +36,67 @@ TEXT_AREA.addEventListener('scroll', () => {
     OVERLAY.scrollTop = TEXT_AREA.scrollTop;
 });
 
-TEXT_AREA.addEventListener('input', () => {
-    updateRemoteCursor(STRETCHER, TEXT_AREA.value.length);
-    // Add the padding to fully reach the bottom of the text area
+// Disables everything but single-char insert/delete in the text area
+TEXT_AREA.addEventListener('beforeinput', (event) => {
+    const { inputType, data } = event;
+    
+    // Strictly block every operation with multiple chars selected
+    if (event.target.selectionEnd - event.target.selectionStart > 1) {
+        event.preventDefault();
+        return;
+    }
+
+    // Allow single-char deletions (backspace/delete)
+    if (inputType.includes('delete')) { return; }
+
+    // Allow single-char additions
+    if (data && data.length === 1) { return; }
+
+    // Block everything else (pasting, dragging, multi-char autocomplete)
+    event.preventDefault();
+});
+
+// Extra safety: Disable 'drop' to prevent text dragging
+TEXT_AREA.addEventListener('drop', (event) => event.preventDefault());
+
+IS_MODIFYING_TEXT = false;
+
+TEXT_AREA.addEventListener('input', (event) => {
+    IS_MODIFYING_TEXT = true;
+
+    // Move the STRETCHER cursor to the absolute bottom of the text area
+    moveRemoteCursor(STRETCHER, TEXT_AREA.value.length);
     STRETCHER.style.top = `${parseInt(STRETCHER.style.top) + PADDING}px`;
+ 
+    const { inputType, data } = event;
+    const { selectionStart, value } = event.target;
+
+    let index = selectionStart;
+    if (inputType.startsWith('insert')) {
+        index--;
+        // TODO: Send the CREATE request
+        console.log(`Sent { username: 'User0', action: 'CREATE', character: '${TEXT_AREA.value[index]}', index: ${index} }`);
+    } 
+  
+    if (inputType.startsWith('delete')) {
+        // TODO: Send the DELETE request
+        console.log(`Sent { username: 'User0', action: 'DELETE', character: null, index: ${index} }`);
+    }
+});
+
+TEXT_AREA.addEventListener('selectionchange', () => {
+    const start = TEXT_AREA.selectionStart;
+    const end = TEXT_AREA.selectionEnd;
+    // Ignore multi-char selections
+    if (end !== start) { return; }
+    // Ignore the selection change if it originated from a text edit
+    if (IS_MODIFYING_TEXT) 
+    {
+        IS_MODIFYING_TEXT = false;
+        return;
+    }
+    // TODO: Send a MOVE request
+    console.log(`Sent { username: 'User0', action: 'MOVE', character: null, index: ${start} }`);
 });
 
 console.log(`Loaded TEXT_AREA {
@@ -55,13 +112,13 @@ const COLORS = [
   '#FFADAD', 
   '#CAFFBF',
   '#A0C4FF',
+  '#F4E1D2', 
   '#D4F0F0',
   '#BDB2FF',
   '#FFD6A5',
   '#9BF6FF',
   '#FDFFB6',
-  '#FFC6FF',
-  '#F4E1D2' 
+  '#FFC6FF'
 ];
 
 let ACTIVE_CURSORS = [];
@@ -115,17 +172,17 @@ function deleteRemoteCursor(username)
     if (index > -1) { ACTIVE_CURSORS.splice(index, 1); }
 }
 
-function updateRemoteCursorByName(username, charIndex)
+function moveRemoteCursorByName(username, charIndex)
 {
     const cursor = document.getElementById(`cursor-${username}`);
     if (!cursor) { 
         console.warn(`Unable to move a remote cursor: cursor-${username} does not exist`); 
         return;
     }
-    updateRemoteCursor(cursor, charIndex);
+    moveRemoteCursor(cursor, charIndex);
 }
 
-function updateRemoteCursor(cursor, charIndex) 
+function moveRemoteCursor(cursor, charIndex) 
 {
     if (charIndex < 0 || charIndex > TEXT_AREA.value.length) { 
         console.warn(`Unable to move a remote cursor: 
@@ -139,55 +196,63 @@ function updateRemoteCursor(cursor, charIndex)
     cursor.style.top = `${top}px`;
     cursor.style.left = `${left}px`;
 
-    console.log(`Moved ${cursor.getAttribute('data-username')} at index ${charIndex} (char before: '${TEXT_AREA.value[charIndex - 1]}') -> {top: ${top}px, left: ${left}px}`);
+    console.debug(`Moved ${cursor.getAttribute('data-username')} at index ${charIndex} (char before: '${TEXT_AREA.value[charIndex - 1]}') -> {top: ${top}px, left: ${left}px}`);
 }
 
-// Increments all the cursors above a certain character
+// Increments all the cursors above a certain character FIXME:
 function incrementCursors(thresholdIndex) {
+    const nextNewlineIndex = TEXT_AREA.value.indexOf('\n', thresholdIndex);
+    const { top, left } = _indexToCoordinates(nextNewlineIndex);
+
+    // What if the char you type is a newline?
+    // The next newline character is at the beginning of a line
+    if (left == PADDING)
+    {
+        // Shift down all cursors after thresholdIndex by one row
+        
+        return;
+    }
+
+    // Move by one character every cursor after thresholdIndex, up until the end of the line
     for (const cursor of ACTIVE_CURSORS) {
         let currentIndex = parseInt(cursor.getAttribute('data-index') || '0');
         if (currentIndex >= thresholdIndex) {
             const newIndex = Math.min(TEXT_AREA.value.length, currentIndex + 1);
-            updateRemoteCursor(cursor, newIndex);
+            moveRemoteCursor(cursor, newIndex);
         }
     }
 }
 
-// Decrements all the cursors above a certain character
+// Decrements all the cursors above a certain character FIXME:
 function decrementCursors(thresholdIndex) {
     for (const cursor of ACTIVE_CURSORS) {
         let currentIndex = parseInt(cursor.getAttribute('data-index') || '0');
         if (currentIndex > thresholdIndex) {
             const newIndex = Math.max(0, currentIndex - 1);
-            updateRemoteCursor(cursor, newIndex);
+            moveRemoteCursor(cursor, newIndex);
         }
     }
 }
 
-// FIXME:
 function processIncomingRequest(username, action, character, index) 
 {
     switch (action) 
     {
-        case 'CREATE':
+        case 'INSERT':
             console.log(`${username} inserted char '${character}' at index ${index} (after char '${TEXT_AREA.value[index - 1]}')`);
             TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + character + TEXT_AREA.value.slice(index);
-            updateRemoteCursorByName(username, index + 1);
-            //incrementCursors();
-            break;
-        case 'UPDATE':
-            console.log(`${username} substituted char '${TEXT_AREA.value[index]}' at index ${index} with char '${character}'`);
-            TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + character + TEXT_AREA.value.slice(index + 1);
-            updateRemoteCursorByName(username, index + 1);
+            moveRemoteCursorByName(username, index + 1);
+            //incrementCursors(index + 2); FIXME:
             break;
         case 'DELETE':
             console.log(`${username} deleted char '${TEXT_AREA.value[index]}' at index ${index}`);
             TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + TEXT_AREA.value.slice(index + 1);
-            updateRemoteCursorByName(username, index);
-            //decrementCursors();
+            moveRemoteCursorByName(username, index);
+            //decrementCursors(); FIXME:
             break;
         case 'MOVE':
-            updateRemoteCursorByName(username, index);
+            console.log(`${username} moved at index ${index}`);
+            moveRemoteCursorByName(username, index);
             break;
         default:
             console.warn(`Received unknown action '${action}' from user '${username}'`);
@@ -197,26 +262,24 @@ function processIncomingRequest(username, action, character, index)
 
 // TODO: DEMO - Remove in production
 
-createRemoteCursor('User0');
 createRemoteCursor('User1');
 createRemoteCursor('User2');
+createRemoteCursor('User3');
 
 async function demo()
 {
     await new Promise(r => setTimeout(r, 3000));
-    const users = ['User0', 'User1', 'User2'];
+    const users = ['User1', 'User2', 'User3'];
     for (const user of users) {
         let randomIndex = Math.floor(Math.random() * TEXT_AREA.value.length);
         processIncomingRequest(user, 'MOVE', null, randomIndex);
         await new Promise(r => setTimeout(r, 500));
         for (character of user) {
-            processIncomingRequest(user, 'CREATE', character, randomIndex);
+            processIncomingRequest(user, 'INSERT', character, randomIndex);
             randomIndex++;
             await new Promise(r => setTimeout(r, 500));
         }
         randomIndex--;
-        processIncomingRequest(user, 'UPDATE', '#', randomIndex);
-        await new Promise(r => setTimeout(r, 500));
         for (character of user) {
             processIncomingRequest(user, 'DELETE', character, randomIndex);
             randomIndex--;
@@ -224,5 +287,5 @@ async function demo()
         }
     }
 }
-demo();
+//demo();
 
