@@ -83,7 +83,7 @@ function _indexToCoordinates(charIndex)
         } 
 
         col++;
-        if (col >= COLS) {
+        if (col >= COLS - 1) {
             row++;
             col = 0;
         }
@@ -139,7 +139,7 @@ function updateRemoteCursor(cursor, charIndex)
     cursor.style.top = `${top}px`;
     cursor.style.left = `${left}px`;
 
-    console.log(`Moved ${cursor.getAttribute('data-username')} at index ${charIndex} -> {top: ${top}px, left: ${left}px}`);
+    console.log(`Moved ${cursor.getAttribute('data-username')} at index ${charIndex} (char before: '${TEXT_AREA.value[charIndex - 1]}') -> {top: ${top}px, left: ${left}px}`);
 }
 
 // Increments all the cursors above a certain character
@@ -167,44 +167,62 @@ function decrementCursors(thresholdIndex) {
 // FIXME:
 function processIncomingRequest(username, action, character, index) 
 {
-    const currentContent = TEXT_AREA.value;
-    let newContent = currentContent;
-
     switch (action) 
     {
         case 'CREATE':
-            newContent = currentContent.slice(0, index) + character + currentContent.slice(index);
-            incrementCursors();
+            console.log(`${username} inserted char '${character}' at index ${index} (after char '${TEXT_AREA.value[index - 1]}')`);
+            TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + character + TEXT_AREA.value.slice(index);
+            updateRemoteCursorByName(username, index + 1);
+            //incrementCursors();
             break;
         case 'UPDATE':
-            newContent = currentContent.slice(0, index) + character + currentContent.slice(index + 1);
+            console.log(`${username} substituted char '${TEXT_AREA.value[index]}' at index ${index} with char '${character}'`);
+            TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + character + TEXT_AREA.value.slice(index + 1);
+            updateRemoteCursorByName(username, index + 1);
             break;
         case 'DELETE':
-            newContent = currentContent.slice(0, index) + currentContent.slice(index + 1);
-            decrementCursors();
+            console.log(`${username} deleted char '${TEXT_AREA.value[index]}' at index ${index}`);
+            TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + TEXT_AREA.value.slice(index + 1);
+            updateRemoteCursorByName(username, index);
+            //decrementCursors();
+            break;
+        case 'MOVE':
+            updateRemoteCursorByName(username, index);
             break;
         default:
             console.warn(`Received unknown action '${action}' from user '${username}'`);
             return;
     }
-
-    console.log(`${username} ${action} character '${character}' at indxe ${index}`);
-    TEXT_AREA.value = newContent;
 }
 
 // TODO: DEMO - Remove in production
+
 createRemoteCursor('User0');
 createRemoteCursor('User1');
 createRemoteCursor('User2');
 
-function randomCursors() 
+async function demo()
 {
-    updateRemoteCursorByName('User0', Math.floor(Math.random() * TEXT_AREA.value.length));
-    updateRemoteCursorByName('User1', Math.floor(Math.random() * TEXT_AREA.value.length));
-    updateRemoteCursorByName('User2', Math.floor(Math.random() * TEXT_AREA.value.length));
+    await new Promise(r => setTimeout(r, 3000));
+    const users = ['User0', 'User1', 'User2'];
+    for (const user of users) {
+        let randomIndex = Math.floor(Math.random() * TEXT_AREA.value.length);
+        processIncomingRequest(user, 'MOVE', null, randomIndex);
+        await new Promise(r => setTimeout(r, 500));
+        for (character of user) {
+            processIncomingRequest(user, 'CREATE', character, randomIndex);
+            randomIndex++;
+            await new Promise(r => setTimeout(r, 500));
+        }
+        randomIndex--;
+        processIncomingRequest(user, 'UPDATE', '#', randomIndex);
+        await new Promise(r => setTimeout(r, 500));
+        for (character of user) {
+            processIncomingRequest(user, 'DELETE', character, randomIndex);
+            randomIndex--;
+            await new Promise(r => setTimeout(r, 500));
+        }
+    }
 }
-
-setInterval(() => {
-    randomCursors();
-}, 3000);
+demo();
 
