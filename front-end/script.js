@@ -52,6 +52,9 @@ TEXT_AREA.addEventListener('beforeinput', (event) => {
     // Allow single-char additions
     if (data && data.length === 1) { return; }
 
+    // Allow newlines
+    if (inputType === 'insertLineBreak' || inputType === 'insertParagraph') { return; }
+
     // Block everything else (pasting, dragging, multi-char autocomplete)
     event.preventDefault();
 });
