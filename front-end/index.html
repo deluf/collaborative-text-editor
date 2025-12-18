@@ -6,22 +6,42 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>Collaborative text editor</h1>
-    <h3>{Document name}</h3>
-    <button>Share</button>
-    <span>{List of active users}</span>
-    <div id="editor-container">
-        <div id="overlay" class="editor-layer"></div>
-        <textarea id="textarea" class="editor-layer" spellcheck="false">
+    <div id="notepad">
+        <div id="notepad-status-bar">
+            <div class="horizontal">
+                <div id="notepad-icon" class="icon"></div>
+                <span id="document-name">Demo.txt</span>
+            </div>
+            <div class="horizontal">
+                <div id="minimize-icon" class="icon"></div>
+                <div id="maximize-icon" class="icon"></div>
+                <div id="close-icon" class="icon"></div>
+            </div>
+        </div>
+        <div id="notepad-menu-bar">
+            <span>File</span>
+            <span>Edit</span>
+            <span>Format</span>
+            <span>View</span>
+            <span>Share</span>
+            <span>Help</span>
+        </div>
+        <div id="editor-container">
+            <div id="overlay" class="editor-layer"></div>
+            <textarea id="textarea" class="editor-layer" spellcheck="false">
 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt
  - ut labore et dolore magna aliqua. Ut enim ad minim veniam,
  - quis nostrud exercitation ullamco laboris nisi ut aliquip ex
 
 ea commodo consequat. Duis aute irure dolor in reprehenderit
 in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</textarea>
+            <div id="clippy" class="icon"></div>
+        </div>
+        <div id="notepad-footer">
+            <div>Created by <span>{username}</span></div>
+            <div>Last updated <span>{DD/MM/YY HH:MM:SS}</span> by <span>{username}</span></div>
+        </div>
     </div>
-    <span>Created by {username}, last updated {DD/MM/YY HH:MM:SS} by {username}</span>
-    <button>Home</button>
     <script src="script.js"></script>
 </body>
 </html>

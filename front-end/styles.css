@@ -4,11 +4,134 @@
 }
 
 body {
+    font-family: Tahoma, sans-serif;
+    font-size: 10pt;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     margin: 0;
+    height: 100vh;
+    background-image: url("bliss.jpg");
+    background-size: cover;        
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.horizontal {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+#notepad {
+    border: 3px solid #1145d6;
+    border-radius: 10px 10px 0 0;
+}
+
+#notepad-status-bar {
+    background-color: #1145d6; 
+    background-image: radial-gradient(#1150e7 1px, #1145d6 0px);
+    background-size: 4px 4px;
+    padding: 4px;
+    justify-content: space-between;
+    font-size: 11pt;
+}
+
+#notepad-footer {
+    background-color: #ECE9D8;
+    padding: 3px;
+    border-top: 1px solid #aca899;
+    gap: 5px;
+}
+
+/* Create the 3D 'sunken' effect */
+#notepad-footer > div {
+    padding: 1px 3px;
+    border: 1.5px solid;
+    border-color: #aca899 white white #aca899; 
+}
+
+#notepad-status-bar, #notepad-footer {
+   display: flex;
+   flex-direction: row;
+   align-items: center;
+}
+
+#notepad-icon {
+    background-image: url("notepad.png");
+}
+
+#document-name {
+    color: white;
+    margin-left: 5px;
+}
+
+#minimize-icon {
+    background-image: url("minimize.png");
+    opacity: 0.6; 
+}
+
+#maximize-icon {
+    background-image: url("maximize.png");
+    opacity: 0.6; 
+}
+
+#close-icon {
+    background-image: url("close.png");
+}
+
+#close-icon:hover {
+    cursor: pointer;
+    opacity: 0.9;
+}
+
+.icon {
+    margin: 1px;
+    width: 24px;
+    height: 24px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain; 
+}
+
+#notepad-menu-bar {
+    background-color: #e9eadb;
+    border-bottom: 1.5px solid #a4a4a4;
+    padding: 2px;
+}
+
+#notepad-menu-bar > span {
+    margin-left: 8px;
+}
+
+#notepad-menu-bar > span:hover {
+    background-color: white;
+    cursor: pointer;
+}
+
+#clippy {
+    background-image: url("clippy.png");
+    width: 106px;
+    height: 128px;
+    position: absolute;
+    right: 0px;
+    bottom: -10px;
+    z-index: 3;
+    cursor: help; 
+}
+
+#clippy:hover::after {
+    content: "Clippy would never spy on you...";
+    position: absolute;
+    top: -10px; 
+    right: 5px;
+    background-color: #FFFFE1; 
+    border: 1px solid black;
+    padding: 3px 5px;
+    white-space: nowrap;
+    z-index: 3;
+    box-shadow: 2px 2px 0px rgba(0,0,0,0.1); 
 }
 
 #editor-container {
@@ -22,11 +145,11 @@ body {
     width: 100%;
     height: 100%;
     margin: 0;
-    border: 1px solid #333;
+    border: 0;
     box-sizing: border-box;
     /* Font family is critical - it must be monospace */ 
     font-family: 'Courier New', monospace; 
-    font-size: 16px;
+    font-size: 12pt;
     line-height: var(--line-height);
     /* break words exactly at the textarea right border, not before */
     word-break: break-all; 
@@ -39,7 +162,6 @@ body {
 
 #textarea {
     z-index: 1;
-    background: transparent;
     resize: none;
     outline: none;
 }
@@ -67,11 +189,13 @@ body {
     content: attr(data-username);
     top: calc(0px - var(--line-height));
     left: 0;
-    font-size: 14px;
+    font-size: 11pt;
     font-weight: bold;
     background-color: inherit;
     /* Makes it as wide as the username */
     white-space: nowrap;
     padding: 0 5px 0 5px;
+    border: 1px solid #000000; 
+    box-shadow: 2px 2px 0px rgba(0,0,0,0.1);
 }
 
