@@ -202,51 +202,15 @@ function moveRemoteCursor(cursor, charIndex)
     console.debug(`Moved ${cursor.getAttribute('data-username')} at index ${charIndex} (char before: '${TEXT_AREA.value[charIndex - 1]}') -> {top: ${top}px, left: ${left}px}`);
 }
 
-function incrementCursors(username, character, index) 
+// Synchronizes all cursors starting from 'index' to their data-index attribute plus the specified offset
+function synchronizeCursors(index, offset) 
 {
-    // Inserted a newline character 
-    if (character === '\n')
-    {
-        console.error('NEWLINE CHAR');
-        // TODO: ...
-        return;
-    }
-
-    // The inserted character created an empty line
-    const nextNewlineIndex = TEXT_AREA.value.indexOf('\n', index);
-    const { top, left } = _indexToCoordinates(nextNewlineIndex);
-    const delta = CHAR_SIZE.width / 2;
-    if (nextNewlineIndex !== -1 && left < PADDING + delta)
-    {
-        // Shift all cursors index <= X < nextNewlineIndex by one column
-        // Shift all cursors nextNewlineIndex <= X < TEXT_AREA.value.length by one row
-        console.error(`CREATED AN EMPTY LINE! (${left} < ${PADDING + delta})`);
-        // TODO: ...
-        return;
-    }
-
     const start = index;
-    const end = nextNewlineIndex !== -1 ? nextNewlineIndex : TEXT_AREA.value.length - 1;
-    console.error(`NORMAL SHIFT - Searching between ${start} (${TEXT_AREA.value[start]}) and ${end} (${TEXT_AREA.value[end]})`);
-
-    // Move by one character every cursor after index, up until the end of the line
+    const end = TEXT_AREA.value.length - 1;
     for (const cursor of ACTIVE_CURSORS) {
-        const cursor_username = cursor.getAttribute('data-username');
-        if (username === cursor_username) { continue; }
         const currentIndex = parseInt(cursor.getAttribute('data-index') || '0');
         if (currentIndex >= start && currentIndex <= end) {
-            const newIndex = Math.min(TEXT_AREA.value.length, currentIndex + 1);
-            moveRemoteCursor(cursor, newIndex);
-        }
-    }
-}
-
-// Decrements all the cursors above a certain character FIXME:
-function decrementCursors(index) {
-    for (const cursor of ACTIVE_CURSORS) {
-        let currentIndex = parseInt(cursor.getAttribute('data-index') || '0');
-        if (currentIndex > index && currentIndex <= nextNewlineIndex) {
-            const newIndex = Math.max(0, currentIndex - 1);
+            const newIndex = Math.min(TEXT_AREA.value.length, currentIndex + offset);
             moveRemoteCursor(cursor, newIndex);
         }
     }
@@ -259,14 +223,14 @@ function processIncomingRequest(username, action, character, index)
         case 'INSERT':
             console.log(`${username} inserted char '${character}' at index ${index} (after char '${TEXT_AREA.value[index - 1]}')`);
             TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + character + TEXT_AREA.value.slice(index);
+            synchronizeCursors(index, +1);
             moveRemoteCursorByName(username, index + 1);
-            incrementCursors(username, character, index);
             break;
         case 'DELETE':
             console.log(`${username} deleted char '${TEXT_AREA.value[index]}' at index ${index}`);
             TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + TEXT_AREA.value.slice(index + 1);
+            synchronizeCursors(index, -1);
             moveRemoteCursorByName(username, index);
-            //decrementCursors(); FIXME:
             break;
         case 'MOVE':
             console.log(`${username} moved at index ${index}`);
