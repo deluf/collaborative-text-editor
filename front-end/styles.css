@@ -29,7 +29,9 @@ body {
     font-size: 16px;
     line-height: var(--line-height);
     /* break words exactly at the textarea right border, not before */
-    word-break: break-all;     
+    word-break: break-all; 
+    /* break spaces (otherwise they are not properly rendered) */
+    white-space: break-spaces;
     /* Only show vertical scroll bar */ 
     overflow-y: auto;
     overflow-x: hidden;

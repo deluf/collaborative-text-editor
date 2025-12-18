@@ -77,8 +77,8 @@ TEXT_AREA.addEventListener('input', (event) => {
     let index = selectionStart;
     if (inputType.startsWith('insert')) {
         index--;
-        // TODO: Send the CREATE request
-        console.log(`Sent { username: 'User0', action: 'CREATE', character: '${TEXT_AREA.value[index]}', index: ${index} }`);
+        // TODO: Send the INSERT request
+        console.log(`Sent { username: 'User0', action: 'INSERT', character: '${TEXT_AREA.value[index]}', index: ${index} }`);
     } 
   
     if (inputType.startsWith('delete')) {
@@ -202,24 +202,39 @@ function moveRemoteCursor(cursor, charIndex)
     console.debug(`Moved ${cursor.getAttribute('data-username')} at index ${charIndex} (char before: '${TEXT_AREA.value[charIndex - 1]}') -> {top: ${top}px, left: ${left}px}`);
 }
 
-// Increments all the cursors above a certain character FIXME:
-function incrementCursors(thresholdIndex) {
-    const nextNewlineIndex = TEXT_AREA.value.indexOf('\n', thresholdIndex);
-    const { top, left } = _indexToCoordinates(nextNewlineIndex);
-
-    // What if the char you type is a newline?
-    // The next newline character is at the beginning of a line
-    if (left == PADDING)
+function incrementCursors(username, character, index) 
+{
+    // Inserted a newline character 
+    if (character === '\n')
     {
-        // Shift down all cursors after thresholdIndex by one row
-        
+        console.error('NEWLINE CHAR');
+        // TODO: ...
         return;
     }
 
-    // Move by one character every cursor after thresholdIndex, up until the end of the line
+    // The inserted character created an empty line
+    const nextNewlineIndex = TEXT_AREA.value.indexOf('\n', index);
+    const { top, left } = _indexToCoordinates(nextNewlineIndex);
+    const delta = CHAR_SIZE.width / 2;
+    if (nextNewlineIndex !== -1 && left < PADDING + delta)
+    {
+        // Shift all cursors index <= X < nextNewlineIndex by one column
+        // Shift all cursors nextNewlineIndex <= X < TEXT_AREA.value.length by one row
+        console.error(`CREATED AN EMPTY LINE! (${left} < ${PADDING + delta})`);
+        // TODO: ...
+        return;
+    }
+
+    const start = index;
+    const end = nextNewlineIndex !== -1 ? nextNewlineIndex : TEXT_AREA.value.length - 1;
+    console.error(`NORMAL SHIFT - Searching between ${start} (${TEXT_AREA.value[start]}) and ${end} (${TEXT_AREA.value[end]})`);
+
+    // Move by one character every cursor after index, up until the end of the line
     for (const cursor of ACTIVE_CURSORS) {
-        let currentIndex = parseInt(cursor.getAttribute('data-index') || '0');
-        if (currentIndex >= thresholdIndex) {
+        const cursor_username = cursor.getAttribute('data-username');
+        if (username === cursor_username) { continue; }
+        const currentIndex = parseInt(cursor.getAttribute('data-index') || '0');
+        if (currentIndex >= start && currentIndex <= end) {
             const newIndex = Math.min(TEXT_AREA.value.length, currentIndex + 1);
             moveRemoteCursor(cursor, newIndex);
         }
@@ -227,10 +242,10 @@ function incrementCursors(thresholdIndex) {
 }
 
 // Decrements all the cursors above a certain character FIXME:
-function decrementCursors(thresholdIndex) {
+function decrementCursors(index) {
     for (const cursor of ACTIVE_CURSORS) {
         let currentIndex = parseInt(cursor.getAttribute('data-index') || '0');
-        if (currentIndex > thresholdIndex) {
+        if (currentIndex > index && currentIndex <= nextNewlineIndex) {
             const newIndex = Math.max(0, currentIndex - 1);
             moveRemoteCursor(cursor, newIndex);
         }
@@ -245,7 +260,7 @@ function processIncomingRequest(username, action, character, index)
             console.log(`${username} inserted char '${character}' at index ${index} (after char '${TEXT_AREA.value[index - 1]}')`);
             TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + character + TEXT_AREA.value.slice(index);
             moveRemoteCursorByName(username, index + 1);
-            //incrementCursors(index + 2); FIXME:
+            incrementCursors(username, character, index);
             break;
         case 'DELETE':
             console.log(`${username} deleted char '${TEXT_AREA.value[index]}' at index ${index}`);
@@ -263,7 +278,7 @@ function processIncomingRequest(username, action, character, index)
     }
 }
 
-// TODO: DEMO - Remove in production
+// TODO: DEMO - Simulates incoming network requests 
 
 createRemoteCursor('User1');
 createRemoteCursor('User2');
@@ -271,7 +286,7 @@ createRemoteCursor('User3');
 
 async function demo()
 {
-    await new Promise(r => setTimeout(r, 3000));
+    await new Promise(r => setTimeout(r, 1000));
     const users = ['User1', 'User2', 'User3'];
     for (const user of users) {
         let randomIndex = Math.floor(Math.random() * TEXT_AREA.value.length);
@@ -290,5 +305,7 @@ async function demo()
         }
     }
 }
+
 //demo();
+// TODO: Implement the other visual UI features (even with placeholders)
 
