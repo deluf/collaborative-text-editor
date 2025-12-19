@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Collaborative text editor</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
     <div id="notepad">
@@ -15,7 +15,7 @@
             <div class="horizontal">
                 <div id="minimize-icon" class="icon"></div>
                 <div id="maximize-icon" class="icon"></div>
-                <a href="index.html"><div id="close-icon" class="icon"></div></a>
+                <a href="/"><div id="close-icon" class="icon"></div></a>
             </div>
         </div>
         <div id="notepad-menu-bar">
@@ -30,8 +30,7 @@
             <a href="document.html">demo.txt</a>
         </div>
         <div id="notepad-footer">
-            <div>Created by <span>{username}</span></div>
-            <div>Last updated <span>{DD/MM/YY HH:MM:SS}</span> by <span>{username}</span></div>
+            <div>Display name <input type="text" name="displayname" placeholder="antirez" id="displayname" maxlength="16"></div>
         </div>
     </div>
 </body>
