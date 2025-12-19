@@ -9,8 +9,8 @@
     <div id="notepad">
         <div id="notepad-status-bar">
             <div class="horizontal">
-                <div id="notepad-icon" class="icon"></div>
-                <span id="document-name">Index.txt</span>
+                <div id="folder-icon" class="icon"></div>
+                <span id="document-name">Local disk (C:)</span>
             </div>
             <div class="horizontal">
                 <div id="minimize-icon" class="icon"></div>
@@ -26,13 +26,47 @@
             <span>Share</span>
             <span>Help</span>
         </div>
-        <div id="documents">
-            <a href="document.html">demo.txt</a>
+        <div id="documents-background">
+            <div id="documents">
+                <a href="/create">
+                    <div class="create-document"></div>
+                    <div class="document-name">New</div>
+                </a>
+                <a href="/">
+                    <div class="owned-document"></div>
+                    <div class="document-name">test1.txt</div>
+                </a>
+                <a href="/">
+                    <div class="owned-document"></div>
+                    <div class="document-name">test2.txt</div>
+                </a>
+                <a href="/">
+                    <div class="owned-document"></div>
+                    <div class="document-name">test3.txt</div>
+                </a>
+                <a href="/">
+                    <div class="owned-document"></div>
+                    <div class="document-name">test4.txt</div>
+                </a>
+                <a href="/">
+                    <div class="owned-document"></div>
+                    <div class="document-name">test4.txt</div>
+                </a>
+                <a href="/">
+                    <div class="owned-document"></div>
+                    <div class="document-name">test4.txt</div>
+                </a>
+                <a href="/">
+                    <div class="shared-document"></div>
+                    <div class="document-name">shared.txt</div>
+                </a>
+            </div>
         </div>
         <div id="notepad-footer">
-            <div>Display name <input type="text" name="displayname" placeholder="antirez" id="displayname" maxlength="16"></div>
+            <div>Display name <input type="text" name="displayname" placeholder="..." id="displayname" maxlength="16"></div>
         </div>
     </div>
+    <script src="/static/js/index.js"></script>
 </body>
 </html>
 

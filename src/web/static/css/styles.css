@@ -216,10 +216,27 @@ body {
     box-shadow: 2px 2px 0px rgba(0,0,0,0.1);
 }
 
-#documents {
+#documents-background {
     width: 788.125px;
     height: 500px;
-    background-color: white;
+    background-image: url("/static/media/explorer.png");
+    background-size: cover;        
+    background-repeat: no-repeat;
+    background-position: center;
+    position: relative;
+}
+
+#documents {
+    position: absolute;
+    left: 10px;
+    top: 90px;
+    width: 768px;
+    height: 400px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: 15px; /* Space between icons */
+    grid-auto-rows: 80px;
+    text-align: center;
 }
 
 #displayname {
@@ -228,5 +245,40 @@ body {
     outline: none;
     border: none;
     background-color: inherit;
+}
+
+#folder-icon {
+    background-image: url("/static/media/folder.png");
+}
+
+.create-document {
+    background-image: url("/static/media/create.png");
+}
+
+.owned-document {
+    background-image: url("/static/media/owned.png");
+}
+
+.shared-document {
+    background-image: url("/static/media/shared.png");
+}
+
+#documents a {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-decoration: none; 
+    font-size: 9pt;
+    color: black;
+}
+
+.create-document, .owned-document, .shared-document {
+    margin-bottom: 5px;
+    width: 64px;
+    height: 64px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain; 
 }
 
