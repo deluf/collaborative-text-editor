@@ -1,6 +1,10 @@
 const CONTAINER = document.getElementById('editor-container');
 const TEXT_AREA = document.getElementById('textarea');
 const OVERLAY = document.getElementById('overlay');
+const DOCUMENT_NAME = document.getElementById('document-name');
+const LAST_UPDATE_TIMESTAMP = document.getElementById('last-update-timestamp'); // FIXME:
+const LAST_UPDATE_USERNAME = document.getElementById('last-update-uername'); // FIXME:
+const DOCUMENTS_KEY = 'documents';
 
 // Computes the width and height in pixels of a single character
 function _computeCharSizePx() 
@@ -242,11 +246,59 @@ function processIncomingRequest(username, action, character, index)
     }
 }
 
+// Handle document storage
+function getLocalDocuments() {
+    const documents = localStorage.getItem(DOCUMENTS_KEY);
+    // Structure: { uuid: string, filename: string, owned: boolean }
+    try {
+        return documents ? JSON.parse(documents) : [];
+    } catch (e) {
+        console.error('Error parsing documents from local storage', e);
+        return [];
+    }
+}
+const documents = getLocalDocuments();
+// .../document?id=...&filename=...
+const params = new URLSearchParams(window.location.search);
+const documentId = params.get('id');
+const filename = params.get('filename');
+let currentDocument = documents.find(d => d.uuid === documentId);
+// The document already exists
+if (currentDocument) {
+    DOCUMENT_NAME.innerText = currentDocument.filename;
+}
+// The document does not exist but is being imported (filename is specified)
+else if (filename) {
+    currentDocument = {
+        uuid: documentId,
+        filename: filename,
+        owned: false
+    };
+    documents.push(currentDocument);
+    localStorage.setItem(DOCUMENTS_KEY, JSON.stringify(documents));
+    DOCUMENT_NAME.innerText = filename;
+}
+// The documents does not exist and no filename is specified - abort
+else { window.location.href = '/'; }
+
+// Handle document sharing
+if (currentDocument.owned) {
+    const shareDocumentButton = document.getElementById('share-document');
+    shareDocumentButton.addEventListener('click', () => {
+        alert(`Share this URL:\nhttp://localhost:8080/document?id=${documentId}&filename=${currentDocument.filename}`); 
+    });
+    shareDocumentButton.className = 'notepad-menu-bar-enabled';
+}
+
+
+
+
+
 // NOTE: DEMO - Simulates incoming network requests 
 
-createRemoteCursor('User1');
-createRemoteCursor('User2');
-createRemoteCursor('User3');
+//createRemoteCursor('User1');
+//createRemoteCursor('User2');
+//createRemoteCursor('User3');
 
 async function demo()
 {
@@ -270,6 +322,6 @@ async function demo()
     }
 }
 
-demo();
-// TODO: Implement the other visual UI features (even with placeholders)
+//demo();
+
 

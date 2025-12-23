@@ -23,26 +23,19 @@
             <span>Edit</span>
             <span>Format</span>
             <span>View</span>
-            <span class="notepad-menu-bar-enabled">Share</span>
+            <span id="share-document">Share</span>
             <span>Help</span>
         </div>
         <div id="editor-container">
             <div id="overlay" class="editor-layer"></div>
-            <textarea id="textarea" class="editor-layer" spellcheck="false">
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt
- - ut labore et dolore magna aliqua. Ut enim ad minim veniam,
- - quis nostrud exercitation ullamco laboris nisi ut aliquip ex
-
-ea commodo consequat. Duis aute irure dolor in reprehenderit
-in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</textarea>
+            <textarea id="textarea" class="editor-layer" spellcheck="false"></textarea>
             <div id="clippy" class="icon"></div>
         </div>
         <div id="notepad-footer">
-            <div>Created by <span>{username}</span></div>
-            <div>Last updated <span>{DD/MM/YY HH:MM:SS}</span> by <span>{username}</span></div>
+            <div>Last updated <span id="last-update-timestamp">{DD/MM/YY HH:MM:SS}</span> by <span id="last-update-username">{username}</span></div>
         </div>
     </div>
-    <script src="/static/js/script.js"></script>
+    <script src="/static/js/document.js"></script>
 </body>
 </html>
 

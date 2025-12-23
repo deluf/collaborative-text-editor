@@ -263,7 +263,7 @@ body {
     background-image: url("/static/media/shared.png");
 }
 
-#documents a {
+#documents > a, #documents > div {
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -271,6 +271,7 @@ body {
     text-decoration: none; 
     font-size: 9pt;
     color: black;
+    cursor: pointer;
 }
 
 .create-document, .owned-document, .shared-document {
