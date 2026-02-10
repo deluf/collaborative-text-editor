@@ -1,0 +1,97 @@
+
+:root { --line-height: 20px; }
+
+body {
+    font-family: Tahoma, sans-serif;
+    font-size: 10pt;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    height: 100vh;
+    background-image: url("/static/media/bliss.jpg");
+    background-size: cover;        
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+#window {
+    border: 3px solid #1145d6;
+    border-radius: 10px 10px 0 0;
+}
+
+#status-bar {
+    background-color: #1145d6; 
+    /* Dots effect */ 
+    background-image: radial-gradient(#1150e7 1px, #1145d6 0px);
+    background-size: 4px 4px;
+    padding: 4px;
+    justify-content: space-between;
+    font-size: 11pt;
+}
+
+#status-bar, #footer, #status-bar > div {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+#window-title {
+    color: white;
+    margin-left: 5px;
+}
+
+.icon {
+    margin: 1px;
+    width: 24px;
+    height: 24px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain; 
+}
+
+#minimize-icon {
+    background-image: url("/static/media/minimize.png");
+    opacity: 0.6; 
+}
+
+#maximize-icon {
+    background-image: url("/static/media/maximize.png");
+    opacity: 0.6; 
+}
+
+#close-icon { background-image: url("/static/media/close.png"); }
+#close-icon:hover {
+    cursor: pointer;
+    opacity: 0.9;
+}
+
+#menu-bar {
+    background-color: #e9eadb;
+    border-bottom: 1.5px solid #a4a4a4;
+    padding: 2px;
+}
+
+#menu-bar > span {
+    margin-left: 8px;
+    color: grey;
+    cursor: pointer;
+}
+
+#footer {
+    background-color: #ECE9D8;
+    padding: 3px;
+    border-top: 1px solid #aca899;
+    gap: 5px;
+}
+
+/* Create the 3D 'sunken' effect */
+#footer > div {
+    padding: 1px 3px;
+    border: 1.5px solid;
+    border-color: #aca899 white white #aca899; 
+    display: flex;
+    align-items: center;
+}
+

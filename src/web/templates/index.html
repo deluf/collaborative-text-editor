@@ -3,22 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <title>Collaborative text editor</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/common.css">
+    <link rel="stylesheet" href="/static/css/index.css">
 </head>
 <body>
-    <div id="notepad">
-        <div id="notepad-status-bar">
-            <div class="horizontal">
-                <div id="folder-icon" class="icon"></div>
-                <span id="document-name">Local disk (C:)</span>
+    <div id="window">
+        <div id="status-bar">
+            <div>
+                <div id="window-icon" class="icon"></div>
+                <span id="window-title">Local disk (C:)</span>
             </div>
-            <div class="horizontal">
+            <div>
                 <div id="minimize-icon" class="icon"></div>
                 <div id="maximize-icon" class="icon"></div>
                 <a href="/"><div id="close-icon" class="icon"></div></a>
             </div>
         </div>
-        <div id="notepad-menu-bar">
+        <div id="menu-bar">
             <span>File</span>
             <span>Edit</span>
             <span>Format</span>
@@ -26,18 +27,19 @@
             <span>Share</span>
             <span>Help</span>
         </div>
-        <div id="documents-background">
+        <div id="main">
             <div id="documents">
                 <div id="create-document">
-                    <div class="create-document"></div>
-                    <div class="document-name">Create</div>
+                    <div class="create-document-icon"></div>
+                    <div>Create</div>
                 </div>
             </div>
         </div>
-        <div id="notepad-footer">
-            <div>Display name <input type="text" name="displayname" placeholder="..." id="displayname" maxlength="16"></div>
+        <div id="footer">
+            <div>Display name <input type="text" placeholder="..." id="display-name" maxlength="16"></div>
         </div>
     </div>
+    <script src="/static/js/common.js"></script>
     <script src="/static/js/index.js"></script>
 </body>
 </html>
