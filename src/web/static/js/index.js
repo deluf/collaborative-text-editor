@@ -1,52 +1,38 @@
-// Handle display name
+import { LOCAL_STORAGE_KEYS, Note } from './common.js';
+
+/* Set the display name */
 const displayNameInput = document.getElementById('display-name');
-const currentDisplayName = localStorage.getItem(LOCAL_STORAGE_KEYS.DISPLAY_NAME) ??
-    String(Math.floor(Date.now() / 1000));
+let currentDisplayName = localStorage.getItem(LOCAL_STORAGE_KEYS.DISPLAY_NAME);
+// If the display name is already defined use that, otherwise generate it as a random integer 
+if (!currentDisplayName) {
+    currentDisplayName = String(Math.floor(Math.random() * 1_000_000_000));
+    localStorage.setItem(LOCAL_STORAGE_KEYS.DISPLAY_NAME, currentDisplayName);
+}
 displayNameInput.value = currentDisplayName;
+// Event listener that saves manual changes to the display name in the local storage
 displayNameInput.addEventListener('input', (event) => {
     localStorage.setItem(LOCAL_STORAGE_KEYS.DISPLAY_NAME, event.target.value);
 });
 
-// Render existing documents
-// Document structure: { uuid: string, filename: string, owned: boolean }
-const documents = getLocalDocuments();
-const documentsContainer = document.getElementById('documents');
-documents.forEach(doc => 
-{
-    const link = document.createElement('a');
-    link.href = `/document?id=${doc.uuid}`;
-    
-    const icon = document.createElement('div');
-    icon.className = doc.owned ? 'owned-document-icon' : 'shared-document-icon';
 
-    const name = document.createElement('div');
-    name.textContent = doc.filename;
-
-    link.appendChild(icon);
-    link.appendChild(name);
-    documentsContainer.appendChild(link);
+/* Render existing notes */
+const notesContainer = document.getElementById('notes');
+Note.getAll().forEach(note => {
+    notesContainer.appendChild(note.render());
 });
 
-// Create new document
-document.getElementById('create-document').addEventListener('click', () => 
+/* Handler for creating a new note */
+document.getElementById('create-note').addEventListener('click', () => 
 {
-    // Popup for the filename
-    const filename = prompt('Enter the name of the new note:', '');
-    if (filename === null || filename.trim() === '') { return; }  
-
-    const uuid = self.crypto.randomUUID();
-    const newDocument = {
-        uuid: uuid,
-        filename: filename,
-        owned: true 
-    };
-
-    // Add to local storage
-    const currentDocs = getLocalDocuments();
-    currentDocs.push(newDocument);
-    localStorage.setItem(LOCAL_STORAGE_KEYS.DOCUMENTS, JSON.stringify(currentDocs));
-
-    // Open the created document
-    window.location.href = `/document?id=${uuid}`;
+    // Popup for the name
+    const name = prompt('Enter the name of the new note:', '');
+    if (name === null) return; // User cancelled prompt
+    try {
+        const note = new Note({ name: name });
+        note.save();
+        note.open();
+    } 
+    catch (error) {
+        alert(error.message); // e.g. "A note's name cannot be empty"
+    }
 });
-

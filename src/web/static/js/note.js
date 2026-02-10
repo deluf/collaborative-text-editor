@@ -1,7 +1,9 @@
+import { Note } from './common.js';
+
 const CONTAINER = document.getElementById('main');
 const TEXT_AREA = document.getElementById('textarea');
 const OVERLAY = document.getElementById('overlay');
-const DOCUMENT_NAME = document.getElementById('window-title'); // FIXME:
+const NOTE_NAME = document.getElementById('window-title'); // FIXME:
 const LAST_UPDATE_TIMESTAMP = document.getElementById('last-update-timestamp'); // FIXME:
 const LAST_UPDATE_USERNAME = document.getElementById('last-update-uername'); // FIXME:
 
@@ -65,7 +67,7 @@ TEXT_AREA.addEventListener('beforeinput', (event) => {
 // Extra safety: Disable 'drop' to prevent text dragging
 TEXT_AREA.addEventListener('drop', (event) => event.preventDefault());
 
-IS_MODIFYING_TEXT = false;
+let IS_MODIFYING_TEXT = false;
 
 TEXT_AREA.addEventListener('input', (event) => {
     IS_MODIFYING_TEXT = true;
@@ -245,49 +247,61 @@ function processIncomingRequest(username, action, character, index)
     }
 }
 
-// Handle document storage
-const documents = getLocalDocuments();
-// .../document?id=...&filename=...
+
+/** 
+ * Loads the specified note.
+ * Creates it if the uuid is new.
+ * Returns to the website index on error
+ */
+function loadNoteOrCreateIfNew(uuid, name) {
+    const notes = Note.getAll();
+
+    // The note already exists locally
+    const savedNote = notes.find(note => note.uuid === uuid);
+    if (savedNote) {
+        NOTE_NAME.innerText = savedNote.name;
+
+        // If the note is owned enable the share button
+        if (savedNote.owned) {
+            const shareNoteButton = document.getElementById('menu-bar-share');
+            shareNoteButton.addEventListener('click', () => {
+                alert(`Share this URL:\n${savedNote.getShareURL()}`); 
+            });
+            shareNoteButton.className = 'menu-bar-enabled';
+        }
+    }
+
+    // The note does not exist - import it
+    else if (uuid && name) {
+        const importedNote = new Note({
+            uuid: uuid,
+            name: name,
+            owned: false
+        });
+        importedNote.save();
+        NOTE_NAME.innerText = name;
+    }
+
+    // The note does not exist locally and no name is specified - abort
+    else { window.location.href = '/'; }
+}
+
+// .../note?uuid=...&name=...
 const params = new URLSearchParams(window.location.search);
-const documentId = params.get('id');
-const filename = params.get('filename');
-let currentDocument = documents.find(d => d.uuid === documentId);
-// The document already exists
-if (currentDocument) {
-    DOCUMENT_NAME.innerText = currentDocument.filename;
-}
-// The document does not exist but is being imported (filename is specified)
-else if (filename) {
-    currentDocument = {
-        uuid: documentId,
-        filename: filename,
-        owned: false
-    };
-    documents.push(currentDocument);
-    localStorage.setItem(LOCAL_STORAGE_KEYS.DOCUMENTS, JSON.stringify(documents));
-    DOCUMENT_NAME.innerText = filename;
-}
-// The documents does not exist and no filename is specified - abort
-else { window.location.href = '/'; }
-
-// Handle document sharing
-if (currentDocument.owned) {
-    const shareDocumentButton = document.getElementById('menu-bar-share');
-    shareDocumentButton.addEventListener('click', () => {
-        alert(`Share this URL:\nhttp://localhost:8080/document?id=${documentId}&filename=${currentDocument.filename}`); 
-    });
-    shareDocumentButton.className = 'menu-bar-enabled';
-}
+const uuid = params.get('uuid');
+const name = params.get('name');
+loadNoteOrCreateIfNew(uuid, name)
 
 
 
 
+/*
 
-// NOTE: DEMO - Simulates incoming network requests 
+DEMO - Simulates incoming network requests 
 
-//createRemoteCursor('User1');
-//createRemoteCursor('User2');
-//createRemoteCursor('User3');
+createRemoteCursor('User1');
+createRemoteCursor('User2');
+createRemoteCursor('User3');
 
 async function demo()
 {
@@ -311,8 +325,8 @@ async function demo()
     }
 }
 
-//TEXT_AREA.value = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam nec finibus magna. Etiam eu ligula tincidunt, ornare odio eu, cursus ex. In erat nibh, blandit sed vestibulum eget, ultricies pellentesque lectus. Curabitur non felis risus. Aenean quis convallis sem. Mauris vel convallis ipsum. Aenean magna leo, facilisis quis quam sed, venenatis aliquam metus.\n\nInteger viverra sit amet sapien vitae bibendum. Maecenas vitae vehicula mi, sed venenatis odio. Morbi volutpat porttitor ultrices. Cras velit libero, gravida eget imperdiet eu, finibus sit amet arcu. Sed gravida convallis eros eget interdum. Vivamus ut purus in augue cursus semper. Donec tristique dui luctus, egestas enim sit amet, consequat justo.\n\nSuspendisse a ex convallis, fringilla felis sed, finibus lectus. Morbi vel sem sit amet leo volutpat ullamcorper eu tristique nisl. Proin at tortor viverra, tincidunt nulla vitae, porta erat. Nullam at dui ac ligula accumsan hendrerit at a nisl. Donec ex sapien, elementum sed lorem quis, fringilla egestas purus. Sed condimentum iaculis interdum. Praesent volutpat massa purus, sit amet euismod orci sagittis sit amet. Etiam bibendum ut sapien non dictum. Duis a tristique lacus. Mauris sed vestibulum lorem. Phasellus luctus libero at nunc cursus, vel facilisis dolor scelerisque. Mauris consectetur vitae enim a fermentum. Fusce vel suscipit quam, ac pharetra purus.";
+TEXT_AREA.value = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam nec finibus magna. Etiam eu ligula tincidunt, ornare odio eu, cursus ex. In erat nibh, blandit sed vestibulum eget, ultricies pellentesque lectus. Curabitur non felis risus. Aenean quis convallis sem. Mauris vel convallis ipsum. Aenean magna leo, facilisis quis quam sed, venenatis aliquam metus.\n\nInteger viverra sit amet sapien vitae bibendum. Maecenas vitae vehicula mi, sed venenatis odio. Morbi volutpat porttitor ultrices. Cras velit libero, gravida eget imperdiet eu, finibus sit amet arcu. Sed gravida convallis eros eget interdum. Vivamus ut purus in augue cursus semper. Donec tristique dui luctus, egestas enim sit amet, consequat justo.\n\nSuspendisse a ex convallis, fringilla felis sed, finibus lectus. Morbi vel sem sit amet leo volutpat ullamcorper eu tristique nisl. Proin at tortor viverra, tincidunt nulla vitae, porta erat. Nullam at dui ac ligula accumsan hendrerit at a nisl. Donec ex sapien, elementum sed lorem quis, fringilla egestas purus. Sed condimentum iaculis interdum. Praesent volutpat massa purus, sit amet euismod orci sagittis sit amet. Etiam bibendum ut sapien non dictum. Duis a tristique lacus. Mauris sed vestibulum lorem. Phasellus luctus libero at nunc cursus, vel facilisis dolor scelerisque. Mauris consectetur vitae enim a fermentum. Fusce vel suscipit quam, ac pharetra purus.";
 
-//demo();
+demo();
 
-
+*/

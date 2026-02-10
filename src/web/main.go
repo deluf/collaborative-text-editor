@@ -18,9 +18,9 @@ func main() {
 		http.ServeFile(w, r, "templates/index.html")
 	})
 
-	// Document Page
-	http.HandleFunc("/document", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "templates/document.html")
+	// Note page
+	http.HandleFunc("/note", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "templates/note.html")
 	})
 
 	log.Println("Server starting on http://localhost:8080")
