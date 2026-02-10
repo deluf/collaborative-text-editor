@@ -1,0 +1,17 @@
+{application, collaborative_editor,
+ [{description, "A collaborative editor backend"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {mod, {collaborative_editor_app, []}},
+  {applications,
+   [kernel,
+    stdlib,
+    cowboy,
+    jsx
+   ]},
+  {env,[]},
+  {modules, []},
+
+  {licenses, ["Apache-2.0"]},
+  {links, []}
+ ]}.

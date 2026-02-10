@@ -1,40 +1,83 @@
-# Start Erlang nodes
+# collaborative_editor
 
-on the machine where you want to run the erlang node just run:
+A real-time collaborative text editor backend built with Erlang/OTP, Cowboy, and CRDTs.
+
+This application allows multiple users to edit the same document simultaneously while maintaining eventual consistency across distributed nodes.
+
+## Features
+
+???
+
+## Prerequisites
+
+* Erlang/OTP
+* Rebar3
+
+## Running Locally
+
+Start the server in an interactive shell:
+
+    $ rebar3 shell
+
+The server will listen on `http://localhost:8080`.
+
+## API & Usage
+
+### WebSocket Endpoint
+Connect to a document using the following URL structure:
+
+    ws://localhost:8080/ws/:doc_id
+
+Example: `ws://localhost:8080/ws/meeting_notes`
+
+### Protocol (JSON)
+The server communicates using simple JSON messages.
+
+#### 1. Insert Character
+input:
+```json
+{
+  "type": "insert",
+  "char": "A",
+  "pos": [1],
+  "user": "User123"
+}
+```
+
+#### 2. Delete Character
+
+input:
+
+```json
+{
+  "type": "delete",
+  "pos": [1],
+  "user": "User123"
+}
+```
+
+#### 3. Initial Sync (Server -> Client)
+
+output:
+
+```json
+{
+  "type": "sync",
+  "data": [
+    {"pos": [1], "char": "H", "user": "UserA"},
+    {"pos": [2], "char": "i", "user": "UserB"}
+  ]
+}
+```
+
+## Distributed Clustering
 
 ```sh
-erl -sname node_number -setcookie mysecret
+rebar3 shell --name node1@127.0.0.1 --setcookie mysecret
+rebar3 shell --name node2@127.0.0.1 --setcookie mysecret
 ```
 
-if you want to connect remote server use:
+connect:
 ```sh
-erl -name client@192.168.1.1 -setcookie mysecret
-```
-
-compile files with:
-
-```
-c(crdt_core), c(doc_registry), c(doc_server), c(ws_handler).
-```
-
-# Connect
-
-Connect by using:
-```
-net_adm:ping('node1@DESKTOP-UG348ML').
-```
-
-if you want to connect to remote server use:
-```
-net_adm:ping('server@192.168.1.5').
-```
-
-# Examples
-
-```
-Node 1: doc_registry:get_server("doc1"). (Spawns the server on Node 1).
-
-Node 2: doc_registry:get_server("doc1"). (Returns the PID from Node 1—no new spawn!).
-
-Node 2: doc_server:add_char("doc1", [1], "bob", "A"). (Updates the doc living on Node 1).
+net_adm:ping('node2@127.0.0.1').
 ```
