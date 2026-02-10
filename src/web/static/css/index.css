@@ -12,7 +12,7 @@
     position: relative;
 }
 
-#documents {
+#notes {
     position: absolute;
     left: 10px;
     top: 90px;
@@ -25,7 +25,7 @@
     text-align: center;
 }
 
-#documents > a, #documents > div {
+#notes > a, #notes > div {
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -36,7 +36,7 @@
     cursor: pointer;
 }
 
-.create-document-icon, .owned-document-icon, .shared-document-icon {
+.create-note-icon, .owned-note-icon, .shared-note-icon {
     margin-bottom: 5px;
     width: 64px;
     height: 64px;
@@ -45,9 +45,9 @@
     background-size: contain; 
 }
 
-.create-document-icon { background-image: url("/static/media/create.png"); }
-.owned-document-icon { background-image: url("/static/media/owned.png"); }
-.shared-document-icon { background-image: url("/static/media/shared.png"); }
+.create-note-icon { background-image: url("/static/media/create.png"); }
+.owned-note-icon { background-image: url("/static/media/owned.png"); }
+.shared-note-icon { background-image: url("/static/media/shared.png"); }
 
 #display-name {
     margin-top: 2px;
