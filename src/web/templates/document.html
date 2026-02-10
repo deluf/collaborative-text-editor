@@ -3,38 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <title>Collaborative text editor</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/common.css">
+    <link rel="stylesheet" href="/static/css/document.css">
 </head>
 <body>
-    <div id="notepad">
-        <div id="notepad-status-bar">
-            <div class="horizontal">
-                <div id="notepad-icon" class="icon"></div>
-                <span id="document-name">{document_name}.txt</span>
+    <div id="window">
+        <div id="status-bar">
+            <div>
+                <div id="window-icon" class="icon"></div>
+                <span id="window-title"></span>
             </div>
-            <div class="horizontal">
+            <div>
                 <div id="minimize-icon" class="icon"></div>
                 <div id="maximize-icon" class="icon"></div>
                 <a href="/"><div id="close-icon" class="icon"></div></a>
             </div>
         </div>
-        <div id="notepad-menu-bar">
+        <div id="menu-bar">
             <span>File</span>
             <span>Edit</span>
             <span>Format</span>
             <span>View</span>
-            <span id="share-document">Share</span>
+            <span id="menu-bar-share">Share</span>
             <span>Help</span>
         </div>
-        <div id="editor-container">
+        <div id="main">
             <div id="overlay" class="editor-layer"></div>
             <textarea id="textarea" class="editor-layer" spellcheck="false"></textarea>
             <div id="clippy" class="icon"></div>
         </div>
-        <div id="notepad-footer">
+        <div id="footer">
             <div>Last updated <span id="last-update-timestamp">{DD/MM/YY HH:MM:SS}</span> by <span id="last-update-username">{username}</span></div>
         </div>
     </div>
+    <script src="/static/js/common.js"></script>
     <script src="/static/js/document.js"></script>
 </body>
 </html>
