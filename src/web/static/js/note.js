@@ -1,3 +1,4 @@
+import { generateKeyBetween } from 'https://esm.sh/jittered-fractional-indexing';
 import { Note } from './common.js';
 
 const CONTAINER = document.getElementById('main');
@@ -83,12 +84,14 @@ TEXT_AREA.addEventListener('input', (event) => {
     if (inputType.startsWith('insert')) {
         index--;
         // TODO: Send the INSERT request
-        console.log(`Sent { username: 'User0', action: 'INSERT', character: '${TEXT_AREA.value[index]}', index: ${index} }`);
-    } 
+        synchronizeCursors(index, +1);
+        console.info(`Sent { username: 'User0', action: 'INSERT', character: '${TEXT_AREA.value[index]}', index: ${index} }`);
+    }
   
     if (inputType.startsWith('delete')) {
         // TODO: Send the DELETE request
-        console.log(`Sent { username: 'User0', action: 'DELETE', character: null, index: ${index} }`);
+        synchronizeCursors(index, -1);
+        console.info(`Sent { username: 'User0', action: 'DELETE', character: null, index: ${index} }`);
     }
 });
 
@@ -104,10 +107,10 @@ TEXT_AREA.addEventListener('selectionchange', () => {
         return;
     }
     // TODO: Send a MOVE request
-    console.log(`Sent { username: 'User0', action: 'MOVE', character: null, index: ${start} }`);
+    console.info(`Sent { username: 'User0', action: 'MOVE', character: null, index: ${start} }`);
 });
 
-console.log(`Loaded TEXT_AREA {
+console.info(`Loaded TEXT_AREA {
     rows: ${ROWS},
     cols: ${COLS},
     width: ${CONTAINER.style.width}, 
@@ -221,24 +224,29 @@ function synchronizeCursors(index, offset)
     }
 }
 
-function processIncomingRequest(username, action, character, index) 
+
+function processIncomingRequest(username, action, character, id) 
 {
+    let index;
     switch (action) 
     {
         case 'INSERT':
-            console.log(`${username} inserted char '${character}' at index ${index} (after char '${TEXT_AREA.value[index - 1]}')`);
+            index = CRDT.insert(id);
+            console.info(`${username} inserted char '${character}' at index ${index} (after char '${TEXT_AREA.value[index - 1]}')`);
             TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + character + TEXT_AREA.value.slice(index);
             synchronizeCursors(index, +1);
             moveRemoteCursorByName(username, index + 1);
             break;
         case 'DELETE':
-            console.log(`${username} deleted char '${TEXT_AREA.value[index]}' at index ${index}`);
+            index = CRDT.delete(id);
+            console.info(`${username} deleted char '${TEXT_AREA.value[index]}' at index ${index}`);
             TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + TEXT_AREA.value.slice(index + 1);
             synchronizeCursors(index, -1);
             moveRemoteCursorByName(username, index);
             break;
         case 'MOVE':
-            console.log(`${username} moved at index ${index}`);
+            index = CRDT.getIndex(id);
+            console.info(`${username} moved at index ${index}`);
             moveRemoteCursorByName(username, index);
             break;
         default:
@@ -295,9 +303,9 @@ loadNoteOrCreateIfNew(uuid, name)
 
 
 
-/*
 
-DEMO - Simulates incoming network requests 
+
+// DEMO - Simulates incoming network requests 
 
 createRemoteCursor('User1');
 createRemoteCursor('User2');
@@ -309,24 +317,95 @@ async function demo()
     const users = ['User1', 'User2', 'User3'];
     for (const user of users) {
         let randomIndex = Math.floor(Math.random() * TEXT_AREA.value.length);
-        processIncomingRequest(user, 'MOVE', null, randomIndex);
+        processIncomingRequest(user, 'MOVE', null, CRDT.ids[randomIndex]);
+        /*
         await new Promise(r => setTimeout(r, 500));
-        for (character of user) {
+        for (const character of user) {
             processIncomingRequest(user, 'INSERT', character, randomIndex);
             randomIndex++;
             await new Promise(r => setTimeout(r, 500));
         }
+        
         randomIndex--;
         for (character of user) {
             processIncomingRequest(user, 'DELETE', character, randomIndex);
             randomIndex--;
             await new Promise(r => setTimeout(r, 500));
         }
+        */
     }
 }
 
-TEXT_AREA.value = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam nec finibus magna. Etiam eu ligula tincidunt, ornare odio eu, cursus ex. In erat nibh, blandit sed vestibulum eget, ultricies pellentesque lectus. Curabitur non felis risus. Aenean quis convallis sem. Mauris vel convallis ipsum. Aenean magna leo, facilisis quis quam sed, venenatis aliquam metus.\n\nInteger viverra sit amet sapien vitae bibendum. Maecenas vitae vehicula mi, sed venenatis odio. Morbi volutpat porttitor ultrices. Cras velit libero, gravida eget imperdiet eu, finibus sit amet arcu. Sed gravida convallis eros eget interdum. Vivamus ut purus in augue cursus semper. Donec tristique dui luctus, egestas enim sit amet, consequat justo.\n\nSuspendisse a ex convallis, fringilla felis sed, finibus lectus. Morbi vel sem sit amet leo volutpat ullamcorper eu tristique nisl. Proin at tortor viverra, tincidunt nulla vitae, porta erat. Nullam at dui ac ligula accumsan hendrerit at a nisl. Donec ex sapien, elementum sed lorem quis, fringilla egestas purus. Sed condimentum iaculis interdum. Praesent volutpat massa purus, sit amet euismod orci sagittis sit amet. Etiam bibendum ut sapien non dictum. Duis a tristique lacus. Mauris sed vestibulum lorem. Phasellus luctus libero at nunc cursus, vel facilisis dolor scelerisque. Mauris consectetur vitae enim a fermentum. Fusce vel suscipit quam, ac pharetra purus.";
+
+// Maps character index in the textarea -> fractional id (string)
+class SimpleCRDT {
+    constructor() {
+        this.ids = []; 
+    }
+
+    /**
+     * Computes the new fractional id for an insertion operation between index and index + 1
+     * @param {number} index 
+     * @returns {string} id
+     */
+    getNewId(index) {
+        const prevId = this.ids[index];
+        const nextId = this.ids[index + 1];
+        return generateKeyBetween(prevId, nextId);
+    }
+
+    /**
+     * Inserts the id in the map maintaining ascending order
+     * @param {string} id 
+     */
+    insert(id) {
+        const index = this.#binarySearch(id);
+        this.ids.splice(index, 0, id);
+        return index;
+    }
+
+    delete(id) {
+        const index = this.#binarySearch(id);
+        this.ids.splice(index, 1);
+        return index;
+    }
+
+    getIndex(id) {
+        return this.#binarySearch(id);
+    }
+
+    /**
+     * Finds the first index where `this.ids[index] >= id` in O(log(N)).
+     * If the ID exists, returns its index.
+     * If the ID does not exist, returns the index where it should be inserted
+     */
+    #binarySearch(id) {
+        let low = 0;
+        let high = this.ids.length;
+
+        while (low < high) {
+            const mid = Math.floor((low + high) / 2);
+            if (this.ids[mid] < id) {
+                low = mid + 1;
+            } else {
+                high = mid;
+            }
+        }
+        return low;
+    }
+}
+
+
+let CRDT = new SimpleCRDT();
+
+TEXT_AREA.value = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam nec finibus magna. Etiam eu ligula tincidunt, ornare odio eu, cursus ex.\nIn erat nibh,\n\nblandit sed vestibulum eget, ultricies pellentesque lectus";
+for (let i = 0; i < TEXT_AREA.value.length; i++) {
+    const id = CRDT.getNewId(i);
+    CRDT.insert(id);
+}
+//TEXT_AREA.value = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam nec finibus magna. Etiam eu ligula tincidunt, ornare odio eu, cursus ex. In erat nibh, blandit sed vestibulum eget, ultricies pellentesque lectus. Curabitur non felis risus. Aenean quis convallis sem. Mauris vel convallis ipsum. Aenean magna leo, facilisis quis quam sed, venenatis aliquam metus.\n\nInteger viverra sit amet sapien vitae bibendum. Maecenas vitae vehicula mi, sed venenatis odio. Morbi volutpat porttitor ultrices. Cras velit libero, gravida eget imperdiet eu, finibus sit amet arcu. Sed gravida convallis eros eget interdum. Vivamus ut purus in augue cursus semper. Donec tristique dui luctus, egestas enim sit amet, consequat justo.\n\nSuspendisse a ex convallis, fringilla felis sed, finibus lectus. Morbi vel sem sit amet leo volutpat ullamcorper eu tristique nisl. Proin at tortor viverra, tincidunt nulla vitae, porta erat. Nullam at dui ac ligula accumsan hendrerit at a nisl. Donec ex sapien, elementum sed lorem quis, fringilla egestas purus. Sed condimentum iaculis interdum. Praesent volutpat massa purus, sit amet euismod orci sagittis sit amet. Etiam bibendum ut sapien non dictum. Duis a tristique lacus. Mauris sed vestibulum lorem. Phasellus luctus libero at nunc cursus, vel facilisis dolor scelerisque. Mauris consectetur vitae enim a fermentum. Fusce vel suscipit quam, ac pharetra purus.";
+
+console.info(CRDT.ids)
 
 demo();
 
-*/
