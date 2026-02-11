@@ -1,15 +1,16 @@
 
 import { fetchDisplayName, Note } from './common.js';
 
+import { RemoteCursorManager } from "./remoteCursorManager.js";
+
 import { SimpleCRDT } from "./simpleCRDT.js";
-let CRDT = new SimpleCRDT();
+const CRDT = new SimpleCRDT();
 
 import { Server, Edit } from "./server.js";
-const server = new Server();
+const server = new Server(processIncomingRequest);
 
 
 const DISPLAY_NAME = fetchDisplayName();
-
 const CONTAINER = document.getElementById('main');
 const TEXT_AREA = document.getElementById('textarea');
 const OVERLAY = document.getElementById('overlay');
@@ -46,12 +47,11 @@ CONTAINER.style.height = `${ROWS * CHAR_SIZE.height + PADDING * 2}px`;
 TEXT_AREA.style.padding = `${PADDING}px`;
 OVERLAY.style.padding = `${PADDING}px`;
 
-// Dummy cursor that stretches the overlay thus enabling cursors scrolling sync 
-const STRETCHER = document.createElement('div');
-STRETCHER.className = 'remote-cursor';
-STRETCHER.style.visibility = 'hidden';
-OVERLAY.appendChild(STRETCHER);
+const remoteCursorManager = new RemoteCursorManager(
+    TEXT_AREA, OVERLAY, CHAR_SIZE, PADDING, COLS
+);
 
+// Scroll sync
 TEXT_AREA.addEventListener('scroll', () => {
     OVERLAY.scrollTop = TEXT_AREA.scrollTop;
 });
@@ -88,9 +88,8 @@ TEXT_AREA.addEventListener('input', (event) => {
     IS_MODIFYING_TEXT = true;
 
     // Move the STRETCHER cursor to the absolute bottom of the text area
-    moveRemoteCursor(STRETCHER, TEXT_AREA.value.length);
-    STRETCHER.style.top = `${parseInt(STRETCHER.style.top) + PADDING}px`;
- 
+    remoteCursorManager.updateStretcher();
+
     const { inputType, data } = event;
     const { selectionStart, value } = event.target;
 
@@ -106,9 +105,8 @@ TEXT_AREA.addEventListener('input', (event) => {
         });
         server.send(edit);
         CRDT.insert(newId);
-        synchronizeCursors(index, +1);
+        remoteCursorManager.synchronizeCursors(index, 1);
         updateNoteStats();
-        console.info("Sent: ", edit, `(index: ${index})`);
     }
   
     if (inputType.startsWith('delete')) {
@@ -119,9 +117,8 @@ TEXT_AREA.addEventListener('input', (event) => {
         });
         server.send(edit);
         CRDT.deleteFromIndex(index);
-        synchronizeCursors(index, -1);
+        remoteCursorManager.synchronizeCursors(index, -1);
         updateNoteStats();
-        console.info("Sent: ", edit, `(index: ${index})`);
     }
 });
 
@@ -142,7 +139,6 @@ TEXT_AREA.addEventListener('selectionchange', () => {
         id: CRDT.getIdFromIndex(start)
     });
     server.send(edit);
-    console.info("Sent: ", edit, `(index: ${start})`);
 });
 
 console.info(`Loaded TEXT_AREA {
@@ -154,113 +150,6 @@ console.info(`Loaded TEXT_AREA {
     char_size: ${CHAR_SIZE.width} x ${CHAR_SIZE.height},
 }`);
 
-const COLORS = [
-  '#FFADAD', 
-  '#CAFFBF',
-  '#A0C4FF',
-  '#F4E1D2', 
-  '#D4F0F0',
-  '#BDB2FF',
-  '#FFD6A5',
-  '#9BF6FF',
-  '#FDFFB6',
-  '#FFC6FF'
-];
-
-let ACTIVE_CURSORS = [];
-
-function _indexToCoordinates(charIndex) 
-{
-    const text = TEXT_AREA.value;
-    let row = 0;
-    let col = 0;
-
-    // Loop through text up to the specific index to simulate rendering
-    for (let i = 0; i < charIndex; i++) 
-    {
-        // If we hit a hard newline, reset col and increment row
-        if (text[i] === '\n') {
-            row++;
-            col = 0;
-            continue;
-        } 
-
-        col++;
-        if (col >= COLS - 1) {
-            row++;
-            col = 0;
-        }
-    }
-
-    const top = (row * CHAR_SIZE.height) + PADDING;
-    const left = (col * CHAR_SIZE.width) + PADDING;
-
-    return { top, left };
-}
-
-// FIXME: dobbiamo usare queste 2
-function createRemoteCursor(username) 
-{
-    const cursor = document.createElement('div');
-    cursor.id = `cursor-${username}`;
-    cursor.className = 'remote-cursor';
-    cursor.setAttribute('data-username', username);
-    cursor.setAttribute('data-index', '0');
-    cursor.style.backgroundColor = COLORS[ACTIVE_CURSORS.length % COLORS.length];
-    OVERLAY.appendChild(cursor);
-    ACTIVE_CURSORS.push(cursor);
-}
-
-function deleteRemoteCursor(username) 
-{
-    const cursor = document.getElementById(`cursor-${username}`);
-    const index = ACTIVE_CURSORS.indexOf(cursor);
-    if (cursor) { cursor.remove(); }
-    if (index > -1) { ACTIVE_CURSORS.splice(index, 1); }
-}
-
-function moveRemoteCursorByName(username, charIndex)
-{
-    const cursor = document.getElementById(`cursor-${username}`);
-    if (!cursor) { 
-        console.warn(`Unable to move a remote cursor: cursor-${username} does not exist`); 
-        return;
-    }
-    moveRemoteCursor(cursor, charIndex);
-}
-
-function moveRemoteCursor(cursor, charIndex) 
-{
-    if (charIndex < 0 || charIndex > TEXT_AREA.value.length) { 
-        console.warn(`Unable to move a remote cursor: 
-            expected a charIndex between 0 and ${TEXT_AREA.value.length}, got ${charIndex} instead`); 
-        return;
-    }
-    
-    cursor.setAttribute('data-index', charIndex);
-
-    const { top, left } = _indexToCoordinates(charIndex);
-    cursor.style.top = `${top}px`;
-    cursor.style.left = `${left}px`;
-
-    console.debug(`Moved ${cursor.getAttribute('data-username')} at index ${charIndex} (char before: '${TEXT_AREA.value[charIndex - 1]}') -> {top: ${top}px, left: ${left}px}`);
-}
-
-// Synchronizes all cursors starting from 'index' to their data-index attribute plus the specified offset
-function synchronizeCursors(index, offset) 
-{
-    const start = index;
-    const end = TEXT_AREA.value.length - 1;
-    for (const cursor of ACTIVE_CURSORS) {
-        const currentIndex = parseInt(cursor.getAttribute('data-index') || '0');
-        if (currentIndex >= start && currentIndex <= end) {
-            const newIndex = Math.min(TEXT_AREA.value.length, currentIndex + offset);
-            moveRemoteCursor(cursor, newIndex);
-        }
-    }
-}
-
-
 /**
  * 
  * @param {Edit} edit 
@@ -268,7 +157,6 @@ function synchronizeCursors(index, offset)
  */
 function processIncomingRequest(edit) 
 {
-    console.info("Received: ", edit);
     let index;
     switch (edit.action) 
     {
@@ -276,22 +164,22 @@ function processIncomingRequest(edit)
             index = CRDT.insert(edit.id);
             //console.info(`${username} inserted char '${character}' at index ${index} (after char '${TEXT_AREA.value[index - 1]}')`);
             TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + edit.char + TEXT_AREA.value.slice(index);
-            synchronizeCursors(index, +1);
-            moveRemoteCursorByName(edit.username, index + 1);
+            remoteCursorManager.synchronizeCursors(index, +1);
+            remoteCursorManager.moveCursorByName(edit.username, index + 1);
             updateNoteStats(edit.username);
             break;
         case 'DELETE':
             index = CRDT.deleteFromId(edit.id);
             //console.info(`${username} deleted char '${TEXT_AREA.value[index]}' at index ${index}`);
             TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + TEXT_AREA.value.slice(index + 1);
-            synchronizeCursors(index, -1);
-            moveRemoteCursorByName(edit.username, index);
+            remoteCursorManager.synchronizeCursors(index, -1);
+            remoteCursorManager.moveCursorByName(edit.username, index);
             updateNoteStats(edit.username);
             break;
         case 'MOVE':
             index = CRDT.getIndexFromId(edit.id);
             //console.info(`${username} moved at index ${index}`);
-            moveRemoteCursorByName(edit.username, index);
+            remoteCursorManager.moveCursorByName(edit.username, index);
             break;
         default:
             console.warn(`Received unknown action '${edit.action}' from user '${edit.username}'`);
@@ -346,57 +234,11 @@ loadNoteOrCreateIfNew(uuid, name)
 
 
 
-/*
-
-// DEMO - Simulates incoming network requests 
-
-createRemoteCursor('User1');
-createRemoteCursor('User2');
-createRemoteCursor('User3');
-
-async function demo()
-{
-    await new Promise(r => setTimeout(r, 1000));
-    const users = ['User1', 'User2', 'User3'];
-    for (const user of users) {
-        let randomIndex = Math.floor(Math.random() * TEXT_AREA.value.length);
-        processIncomingRequest(user, 'MOVE', null, CRDT.getIdFromIndex(randomIndex));
-
-        await new Promise(r => setTimeout(r, 500));
-        for (const character of user) {
-            processIncomingRequest(user, 'INSERT', character, randomIndex);
-            randomIndex++;
-            await new Promise(r => setTimeout(r, 500));
-        }
-        
-        randomIndex--;
-        for (character of user) {
-            processIncomingRequest(user, 'DELETE', character, randomIndex);
-            randomIndex--;
-            await new Promise(r => setTimeout(r, 500));
-        }
-    }
-}
-
-
-demo();
-
-*/
-
-/*
-TEXT_AREA.value = "Lorem ipsum";// dolor sit amet, consectetur adipiscing elit. Nam nec finibus magna. Etiam eu ligula tincidunt, ornare odio eu, cursus ex.\nIn erat nibh,\n\nblandit sed vestibulum eget, ultricies pellentesque lectus";
-for (let i = 0; i < TEXT_AREA.value.length; i++) {
-    const id = CRDT.getNewId(i);
-    CRDT.insert(id);
-}
-//TEXT_AREA.value = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam nec finibus magna. Etiam eu ligula tincidunt, ornare odio eu, cursus ex. In erat nibh, blandit sed vestibulum eget, ultricies pellentesque lectus. Curabitur non felis risus. Aenean quis convallis sem. Mauris vel convallis ipsum. Aenean magna leo, facilisis quis quam sed, venenatis aliquam metus.\n\nInteger viverra sit amet sapien vitae bibendum. Maecenas vitae vehicula mi, sed venenatis odio. Morbi volutpat porttitor ultrices. Cras velit libero, gravida eget imperdiet eu, finibus sit amet arcu. Sed gravida convallis eros eget interdum. Vivamus ut purus in augue cursus semper. Donec tristique dui luctus, egestas enim sit amet, consequat justo.\n\nSuspendisse a ex convallis, fringilla felis sed, finibus lectus. Morbi vel sem sit amet leo volutpat ullamcorper eu tristique nisl. Proin at tortor viverra, tincidunt nulla vitae, porta erat. Nullam at dui ac ligula accumsan hendrerit at a nisl. Donec ex sapien, elementum sed lorem quis, fringilla egestas purus. Sed condimentum iaculis interdum. Praesent volutpat massa purus, sit amet euismod orci sagittis sit amet. Etiam bibendum ut sapien non dictum. Duis a tristique lacus. Mauris sed vestibulum lorem. Phasellus luctus libero at nunc cursus, vel facilisis dolor scelerisque. Mauris consectetur vitae enim a fermentum. Fusce vel suscipit quam, ac pharetra purus.";
-*/
-
-// FIXME:
+// FIXME: demo 
+// TEXT_AREA.value = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam nec finibus magna. Etiam eu ligula tincidunt, ornare odio eu, cursus ex. In erat nibh, blandit sed vestibulum eget, ultricies pellentesque lectus. Curabitur non felis risus. Aenean quis convallis sem. Mauris vel convallis ipsum. Aenean magna leo, facilisis quis quam sed, venenatis aliquam metus.\n\nInteger viverra sit amet sapien vitae bibendum. Maecenas vitae vehicula mi, sed venenatis odio. Morbi volutpat porttitor ultrices. Cras velit libero, gravida eget imperdiet eu, finibus sit amet arcu. Sed gravida convallis eros eget interdum. Vivamus ut purus in augue cursus semper. Donec tristique dui luctus, egestas enim sit amet, consequat justo.\n\nSuspendisse a ex convallis, fringilla felis sed, finibus lectus. Morbi vel sem sit amet leo volutpat ullamcorper eu tristique nisl. Proin at tortor viverra, tincidunt nulla vitae, porta erat. Nullam at dui ac ligula accumsan hendrerit at a nisl. Donec ex sapien, elementum sed lorem quis, fringilla egestas purus. Sed condimentum iaculis interdum. Praesent volutpat massa purus, sit amet euismod orci sagittis sit amet. Etiam bibendum ut sapien non dictum. Duis a tristique lacus. Mauris sed vestibulum lorem. Phasellus luctus libero at nunc cursus, vel facilisis dolor scelerisque. Mauris consectetur vitae enim a fermentum. Fusce vel suscipit quam, ac pharetra purus.";
 document.getElementById("clippy").addEventListener("click", () => {
     for (let i = 0; i < CRDT.ids.length; i++) {
         console.log(` index: ${i} ('${TEXT_AREA.value[i]}') --> id '${CRDT.ids[i]}' `)
     }
     console.log(CRDT.ids.toSorted());
 });
-
