@@ -18,23 +18,35 @@ websocket_init(State) ->
 %% ===================================================================
 websocket_handle({text, Json}, State) ->
     DocId = maps:get(doc_id, State),
-    Map = jsx:decode(Json, [return_maps]),
 
-    case maps:get(<<"type">>, Map) of
-        <<"insert">> ->
-            Char = maps:get(<<"char">>, Map),
-            Pos  = maps:get(<<"pos">>, Map),  %% This is the ID
-            User = maps:get(<<"user">>, Map),
-            doc_server:add_char(DocId, Pos, User, Char);
+    %% Wrap in try-catch to safely handle malformed JSON or missing keys
+    try
+        Map = jsx:decode(Json, [return_maps]),
 
-        <<"delete">> ->
-            Pos  = maps:get(<<"pos">>, Map),  %% This is the ID
-            User = maps:get(<<"user">>, Map),
-            doc_server:remove_char(DocId, Pos, User);
-        _ -> 
+        %% Use maps:get/3 with a default to avoid crashing if "type" is missing
+        case maps:get(<<"type">>, Map, undefined) of
+            <<"insert">> ->
+                Char = maps:get(<<"char">>, Map),
+                Pos  = maps:get(<<"pos">>, Map),
+                User = maps:get(<<"user">>, Map),
+                doc_server:add_char(DocId, Pos, User, Char);
+
+            <<"delete">> ->
+                Pos  = maps:get(<<"pos">>, Map),
+                User = maps:get(<<"user">>, Map),
+                doc_server:remove_char(DocId, Pos, User);
+
+            _ -> 
+                %% Unknown command or missing type -> ignore
+                ok
+        end
+    catch
+        _:_ -> 
+            %% JSON decode error or other crash -> ignore
             ok
     end,
     {ok, State};
+
 websocket_handle(_Data, State) ->
     {ok, State}.
 
