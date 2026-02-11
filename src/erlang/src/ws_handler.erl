@@ -19,30 +19,32 @@ websocket_init(State) ->
 websocket_handle({text, Json}, State) ->
     DocId = maps:get(doc_id, State),
 
-    %% Wrap in try-catch to safely handle malformed JSON or missing keys
     try
         Map = jsx:decode(Json, [return_maps]),
 
-        %% Use maps:get/3 with a default to avoid crashing if "type" is missing
-        case maps:get(<<"type">>, Map, undefined) of
+        case maps:get(<<"action">>, Map, undefined) of
             <<"insert">> ->
                 Char = maps:get(<<"char">>, Map),
-                Pos  = maps:get(<<"pos">>, Map),
-                User = maps:get(<<"user">>, Map),
-                doc_server:add_char(DocId, Pos, User, Char);
+                Id  = maps:get(<<"id">>, Map),
+                User = maps:get(<<"username">>, Map),
+                doc_server:add_char(DocId, Id, User, Char);
 
             <<"delete">> ->
-                Pos  = maps:get(<<"pos">>, Map),
-                User = maps:get(<<"user">>, Map),
-                doc_server:remove_char(DocId, Pos, User);
+                Id  = maps:get(<<"id">>, Map),
+                User = maps:get(<<"username">>, Map),
+                doc_server:remove_char(DocId, Id, User);
+
+            <<"move">> ->
+                Id  = maps:get(<<"id">>, Map),
+                User = maps:get(<<"username">>, Map),
+                doc_server:move_cursor(DocId, User, Id);
 
             _ -> 
-                %% Unknown command or missing type -> ignore
                 ok
         end
     catch
         _:_ -> 
-            %% JSON decode error or other crash -> ignore
+            %% Ignore malformed JSON or missing keys
             ok
     end,
     {ok, State};
@@ -54,34 +56,38 @@ websocket_handle(_Data, State) ->
 %% 4. OUTGOING MESSAGES (From Erlang Processes)
 %% ===================================================================
 
-websocket_info({insert, Pos, User, Char}, State) ->
+websocket_info({insert, Id, User, Char}, State) ->
     Resp = #{
-        type => <<"insert">>,
-        pos  => Pos, 
-        user => User, 
+        action => <<"insert">>,
+        id  => Id, 
+        username => User, 
         char => Char
     },
-    Json = jsx:encode(Resp),
-    {reply, {text, Json}, State};
+    {reply, {text, jsx:encode(Resp)}, State};
 
-websocket_info({delete, Pos, User}, State) ->
+websocket_info({delete, Id, User}, State) ->
     Resp = #{
-        type => <<"delete">>, 
-        pos  => Pos, 
-        user => User
+        action => <<"delete">>, 
+        id  => Id, 
+        username => User
     },
-    Json = jsx:encode(Resp),
-    {reply, {text, Json}, State};
+    {reply, {text, jsx:encode(Resp)}, State};
+
+websocket_info({move, User, Id}, State) ->
+    Resp = #{
+        action => <<"move">>,
+        username => User,
+        id  => Id
+    },
+    {reply, {text, jsx:encode(Resp)}, State};
 
 websocket_info({sync_state, Doc}, State) ->
-    JsonList = [ #{pos => P, char => C} || {P, C} <- Doc ],
-    
+    JsonList = [ #{id => P, char => C} || {P, C} <- Doc ],
     Resp = #{
-        type => <<"sync">>, 
+        action => <<"sync">>, 
         data => JsonList
     },
-    Json = jsx:encode(Resp),
-    {reply, {text, Json}, State};
+    {reply, {text, jsx:encode(Resp)}, State};
 
 websocket_info(_Info, State) ->
     {ok, State}.
