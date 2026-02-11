@@ -1,12 +1,26 @@
-import { generateKeyBetween } from 'https://esm.sh/jittered-fractional-indexing';
-import { Note } from './common.js';
+
+import { fetchDisplayName, Note } from './common.js';
+
+import { SimpleCRDT } from "./simpleCRDT.js";
+let CRDT = new SimpleCRDT();
+
+import { Server, Edit } from "./server.js";
+const server = new Server();
+
+
+const DISPLAY_NAME = fetchDisplayName();
 
 const CONTAINER = document.getElementById('main');
 const TEXT_AREA = document.getElementById('textarea');
 const OVERLAY = document.getElementById('overlay');
-const NOTE_NAME = document.getElementById('window-title'); // FIXME:
-const LAST_UPDATE_TIMESTAMP = document.getElementById('last-update-timestamp'); // FIXME:
-const LAST_UPDATE_USERNAME = document.getElementById('last-update-uername'); // FIXME:
+const NOTE_NAME = document.getElementById('window-title');
+const LAST_UPDATE_TIMESTAMP = document.getElementById('last-update-timestamp');
+const LAST_UPDATE_USERNAME = document.getElementById('last-update-username');
+
+function updateNoteStats(displayname=DISPLAY_NAME) {
+    LAST_UPDATE_TIMESTAMP.innerText = new Date().toLocaleString();
+    LAST_UPDATE_USERNAME.innerText = displayname;
+}
 
 // Computes the width and height in pixels of a single character
 function _computeCharSizePx() 
@@ -83,15 +97,31 @@ TEXT_AREA.addEventListener('input', (event) => {
     let index = selectionStart;
     if (inputType.startsWith('insert')) {
         index--;
-        // TODO: Send the INSERT request
+        const newId = CRDT.getNewId(index);
+        const edit = new Edit({
+            username: DISPLAY_NAME,
+            action: "INSERT",
+            id: newId,
+            char: TEXT_AREA.value[index]
+        });
+        server.send(edit);
+        CRDT.insert(newId);
         synchronizeCursors(index, +1);
-        console.info(`Sent { username: 'User0', action: 'INSERT', character: '${TEXT_AREA.value[index]}', index: ${index} }`);
+        updateNoteStats();
+        console.info("Sent: ", edit, `(index: ${index})`);
     }
   
     if (inputType.startsWith('delete')) {
-        // TODO: Send the DELETE request
+        const edit = new Edit({
+            username: DISPLAY_NAME,
+            action: "DELETE",
+            id: CRDT.getIdFromIndex(index)
+        });
+        server.send(edit);
+        CRDT.deleteFromIndex(index);
         synchronizeCursors(index, -1);
-        console.info(`Sent { username: 'User0', action: 'DELETE', character: null, index: ${index} }`);
+        updateNoteStats();
+        console.info("Sent: ", edit, `(index: ${index})`);
     }
 });
 
@@ -106,8 +136,13 @@ TEXT_AREA.addEventListener('selectionchange', () => {
         IS_MODIFYING_TEXT = false;
         return;
     }
-    // TODO: Send a MOVE request
-    console.info(`Sent { username: 'User0', action: 'MOVE', character: null, index: ${start} }`);
+    const edit = new Edit({
+        username: DISPLAY_NAME,
+        action: "MOVE",
+        id: CRDT.getIdFromIndex(start)
+    });
+    server.send(edit);
+    console.info("Sent: ", edit, `(index: ${start})`);
 });
 
 console.info(`Loaded TEXT_AREA {
@@ -163,6 +198,7 @@ function _indexToCoordinates(charIndex)
     return { top, left };
 }
 
+// FIXME: dobbiamo usare queste 2
 function createRemoteCursor(username) 
 {
     const cursor = document.createElement('div');
@@ -225,32 +261,40 @@ function synchronizeCursors(index, offset)
 }
 
 
-function processIncomingRequest(username, action, character, id) 
+/**
+ * 
+ * @param {Edit} edit 
+ * @returns 
+ */
+function processIncomingRequest(edit) 
 {
+    console.info("Received: ", edit);
     let index;
-    switch (action) 
+    switch (edit.action) 
     {
         case 'INSERT':
-            index = CRDT.insert(id);
-            console.info(`${username} inserted char '${character}' at index ${index} (after char '${TEXT_AREA.value[index - 1]}')`);
-            TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + character + TEXT_AREA.value.slice(index);
+            index = CRDT.insert(edit.id);
+            //console.info(`${username} inserted char '${character}' at index ${index} (after char '${TEXT_AREA.value[index - 1]}')`);
+            TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + edit.char + TEXT_AREA.value.slice(index);
             synchronizeCursors(index, +1);
-            moveRemoteCursorByName(username, index + 1);
+            moveRemoteCursorByName(edit.username, index + 1);
+            updateNoteStats(edit.username);
             break;
         case 'DELETE':
-            index = CRDT.delete(id);
-            console.info(`${username} deleted char '${TEXT_AREA.value[index]}' at index ${index}`);
+            index = CRDT.deleteFromId(edit.id);
+            //console.info(`${username} deleted char '${TEXT_AREA.value[index]}' at index ${index}`);
             TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + TEXT_AREA.value.slice(index + 1);
             synchronizeCursors(index, -1);
-            moveRemoteCursorByName(username, index);
+            moveRemoteCursorByName(edit.username, index);
+            updateNoteStats(edit.username);
             break;
         case 'MOVE':
-            index = CRDT.getIndex(id);
-            console.info(`${username} moved at index ${index}`);
-            moveRemoteCursorByName(username, index);
+            index = CRDT.getIndexFromId(edit.id);
+            //console.info(`${username} moved at index ${index}`);
+            moveRemoteCursorByName(edit.username, index);
             break;
         default:
-            console.warn(`Received unknown action '${action}' from user '${username}'`);
+            console.warn(`Received unknown action '${edit.action}' from user '${edit.username}'`);
             return;
     }
 }
@@ -302,8 +346,7 @@ loadNoteOrCreateIfNew(uuid, name)
 
 
 
-
-
+/*
 
 // DEMO - Simulates incoming network requests 
 
@@ -317,8 +360,8 @@ async function demo()
     const users = ['User1', 'User2', 'User3'];
     for (const user of users) {
         let randomIndex = Math.floor(Math.random() * TEXT_AREA.value.length);
-        processIncomingRequest(user, 'MOVE', null, CRDT.ids[randomIndex]);
-        /*
+        processIncomingRequest(user, 'MOVE', null, CRDT.getIdFromIndex(randomIndex));
+
         await new Promise(r => setTimeout(r, 500));
         for (const character of user) {
             processIncomingRequest(user, 'INSERT', character, randomIndex);
@@ -332,80 +375,28 @@ async function demo()
             randomIndex--;
             await new Promise(r => setTimeout(r, 500));
         }
-        */
     }
 }
 
 
-// Maps character index in the textarea -> fractional id (string)
-class SimpleCRDT {
-    constructor() {
-        this.ids = []; 
-    }
+demo();
 
-    /**
-     * Computes the new fractional id for an insertion operation between index and index + 1
-     * @param {number} index 
-     * @returns {string} id
-     */
-    getNewId(index) {
-        const prevId = this.ids[index];
-        const nextId = this.ids[index + 1];
-        return generateKeyBetween(prevId, nextId);
-    }
+*/
 
-    /**
-     * Inserts the id in the map maintaining ascending order
-     * @param {string} id 
-     */
-    insert(id) {
-        const index = this.#binarySearch(id);
-        this.ids.splice(index, 0, id);
-        return index;
-    }
-
-    delete(id) {
-        const index = this.#binarySearch(id);
-        this.ids.splice(index, 1);
-        return index;
-    }
-
-    getIndex(id) {
-        return this.#binarySearch(id);
-    }
-
-    /**
-     * Finds the first index where `this.ids[index] >= id` in O(log(N)).
-     * If the ID exists, returns its index.
-     * If the ID does not exist, returns the index where it should be inserted
-     */
-    #binarySearch(id) {
-        let low = 0;
-        let high = this.ids.length;
-
-        while (low < high) {
-            const mid = Math.floor((low + high) / 2);
-            if (this.ids[mid] < id) {
-                low = mid + 1;
-            } else {
-                high = mid;
-            }
-        }
-        return low;
-    }
-}
-
-
-let CRDT = new SimpleCRDT();
-
-TEXT_AREA.value = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam nec finibus magna. Etiam eu ligula tincidunt, ornare odio eu, cursus ex.\nIn erat nibh,\n\nblandit sed vestibulum eget, ultricies pellentesque lectus";
+/*
+TEXT_AREA.value = "Lorem ipsum";// dolor sit amet, consectetur adipiscing elit. Nam nec finibus magna. Etiam eu ligula tincidunt, ornare odio eu, cursus ex.\nIn erat nibh,\n\nblandit sed vestibulum eget, ultricies pellentesque lectus";
 for (let i = 0; i < TEXT_AREA.value.length; i++) {
     const id = CRDT.getNewId(i);
     CRDT.insert(id);
 }
 //TEXT_AREA.value = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam nec finibus magna. Etiam eu ligula tincidunt, ornare odio eu, cursus ex. In erat nibh, blandit sed vestibulum eget, ultricies pellentesque lectus. Curabitur non felis risus. Aenean quis convallis sem. Mauris vel convallis ipsum. Aenean magna leo, facilisis quis quam sed, venenatis aliquam metus.\n\nInteger viverra sit amet sapien vitae bibendum. Maecenas vitae vehicula mi, sed venenatis odio. Morbi volutpat porttitor ultrices. Cras velit libero, gravida eget imperdiet eu, finibus sit amet arcu. Sed gravida convallis eros eget interdum. Vivamus ut purus in augue cursus semper. Donec tristique dui luctus, egestas enim sit amet, consequat justo.\n\nSuspendisse a ex convallis, fringilla felis sed, finibus lectus. Morbi vel sem sit amet leo volutpat ullamcorper eu tristique nisl. Proin at tortor viverra, tincidunt nulla vitae, porta erat. Nullam at dui ac ligula accumsan hendrerit at a nisl. Donec ex sapien, elementum sed lorem quis, fringilla egestas purus. Sed condimentum iaculis interdum. Praesent volutpat massa purus, sit amet euismod orci sagittis sit amet. Etiam bibendum ut sapien non dictum. Duis a tristique lacus. Mauris sed vestibulum lorem. Phasellus luctus libero at nunc cursus, vel facilisis dolor scelerisque. Mauris consectetur vitae enim a fermentum. Fusce vel suscipit quam, ac pharetra purus.";
+*/
 
-console.info(CRDT.ids)
-
-demo();
+// FIXME:
+document.getElementById("clippy").addEventListener("click", () => {
+    for (let i = 0; i < CRDT.ids.length; i++) {
+        console.log(` index: ${i} ('${TEXT_AREA.value[i]}') --> id '${CRDT.ids[i]}' `)
+    }
+    console.log(CRDT.ids.toSorted());
+});
 

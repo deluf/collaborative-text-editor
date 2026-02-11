@@ -3,6 +3,16 @@ export const LOCAL_STORAGE_KEYS = {
     NOTES: 'notes'
 };
 
+export function fetchDisplayName() {
+    let currentDisplayName = localStorage.getItem(LOCAL_STORAGE_KEYS.DISPLAY_NAME);
+    // If the display name is already defined use that, otherwise generate it as a random integer 
+    if (!currentDisplayName) {
+        currentDisplayName = String(Math.floor(Math.random() * 1_000_000_000));
+        localStorage.setItem(LOCAL_STORAGE_KEYS.DISPLAY_NAME, currentDisplayName);
+    }
+    return currentDisplayName;
+}
+
 export class Note {
 
     /**
