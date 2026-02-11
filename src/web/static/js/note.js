@@ -157,6 +157,7 @@ console.info(`Loaded TEXT_AREA {
  */
 function processIncomingRequest(edit) 
 {
+    
     let index;
     switch (edit.action) 
     {
