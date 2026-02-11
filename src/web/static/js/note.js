@@ -157,7 +157,7 @@ console.info(`Loaded TEXT_AREA {
  */
 function processIncomingRequest(edit) 
 {
-    
+
     let index;
     switch (edit.action) 
     {
@@ -232,6 +232,31 @@ const params = new URLSearchParams(window.location.search);
 const uuid = params.get('uuid');
 const name = params.get('name');
 loadNoteOrCreateIfNew(uuid, name)
+
+
+const deleteNoteButton = document.getElementById('menu-bar-delete');
+deleteNoteButton.addEventListener('click', () => {
+    Note.delete(uuid);
+    window.location.href = '/';
+});
+deleteNoteButton.className = 'menu-bar-enabled';
+
+const renameNoteButton = document.getElementById('menu-bar-rename');
+renameNoteButton.addEventListener('click', () => {
+    // Popup for the name
+    const name = prompt('Enter the new name for this note:', '');
+    if (name === null) return; // User cancelled prompt
+    try {
+        const newName = Note.rename(uuid, name);
+        NOTE_NAME.innerText = newName;
+    }
+    catch (error) {
+        alert(error.message); // e.g. "A note's name cannot be empty"
+    }
+});
+renameNoteButton.className = 'menu-bar-enabled';
+
+
 
 
 

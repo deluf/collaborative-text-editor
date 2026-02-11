@@ -1,9 +1,12 @@
-export const LOCAL_STORAGE_KEYS = {
+
+export { LOCAL_STORAGE_KEYS, fetchDisplayName, Note };
+
+const LOCAL_STORAGE_KEYS = {
     DISPLAY_NAME: 'display-name',
     NOTES: 'notes'
 };
 
-export function fetchDisplayName() {
+function fetchDisplayName() {
     let currentDisplayName = localStorage.getItem(LOCAL_STORAGE_KEYS.DISPLAY_NAME);
     // If the display name is already defined use that, otherwise generate it as a random integer 
     if (!currentDisplayName) {
@@ -13,7 +16,7 @@ export function fetchDisplayName() {
     return currentDisplayName;
 }
 
-export class Note {
+class Note {
 
     /**
      * @param {Object} data
@@ -104,6 +107,37 @@ export class Note {
     static #getAllRaw() {
         const storedNotes = localStorage.getItem(LOCAL_STORAGE_KEYS.NOTES);
         return storedNotes ? JSON.parse(storedNotes) : [];
+    }
+
+    static delete(uuid) {
+        const notes = this.#getAllRaw();
+        const filteredNotes = notes.filter(note => note.uuid !== uuid);
+        localStorage.setItem(
+            LOCAL_STORAGE_KEYS.NOTES,
+            JSON.stringify(filteredNotes)
+        );
+    }
+
+    static rename(uuid, newName) {
+        if (!newName || newName.trim() === '') {
+            throw new Error("A note's name cannot be empty");
+        }
+
+        const notes = this.#getAllRaw();
+        const trimmedName = newName.trim();
+        const note = notes.find(n => n.uuid === uuid);
+
+        if (!note) { 
+            throw new Error("The selected note does not exists");
+        }
+
+        note.name = trimmedName;
+        localStorage.setItem(
+            LOCAL_STORAGE_KEYS.NOTES,
+            JSON.stringify(notes)
+        );
+
+        return newName;
     }
 
 }
