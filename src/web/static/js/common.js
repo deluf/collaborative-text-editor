@@ -1,4 +1,3 @@
-
 export { LOCAL_STORAGE_KEYS, fetchUsername, Note };
 
 const LOCAL_STORAGE_KEYS = {

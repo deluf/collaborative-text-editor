@@ -1,4 +1,3 @@
-
 import { generateKeyBetween } from 'https://esm.sh/jittered-fractional-indexing';
 
 export { SimpleCRDT };
@@ -30,8 +29,8 @@ class SimpleCRDT {
      * @returns {string} The new unique fractional ID.
      */
     getNewId(index) {
-        const prevId = this.ids[index - 1];
-        const nextId = this.ids[index];
+        const prevId = this.getIdFromIndex(index - 1);
+        const nextId = this.getIdFromIndex(index);
         const newId = generateKeyBetween(prevId, nextId);
         return newId;
     }

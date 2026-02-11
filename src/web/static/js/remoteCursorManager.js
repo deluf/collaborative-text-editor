@@ -1,20 +1,41 @@
-
 export { RemoteCursorManager };
 
 /**
- * Manages remote cursors for collaborative editing
+ * Manages remote cursors (the position of other users) for collaborative editing.
+ * Handles the creation, movement, synchronization, and cleanup of cursors.
  */
 class RemoteCursorManager {
+
+    /**
+     * Creates an instance of RemoteCursorManager.
+     * * @param {HTMLTextAreaElement} textArea - The text area element where editing occurs.
+     * @param {HTMLElement} overlay - The overlay container where cursor elements are appended.
+     * @param {Object} charSize - The dimensions of a single character.
+     * @param {number} charSize.width - The width of a character in pixels.
+     * @param {number} charSize.height - The height of a character in pixels.
+     * @param {number} padding - The padding inside the text area in pixels.
+     * @param {number} cols - The number of columns (characters per line) for text wrapping calculations.
+     */
     constructor(textArea, overlay, charSize, padding, cols) {
         this.textArea = textArea;
         this.overlay = overlay;
         this.charSize = charSize;
         this.padding = padding;
         this.cols = cols;
+
+        /** @type {HTMLElement[]} List of active cursor DOM elements. */
         this.activeCursors = [];
-        this.cursorLastActivity = new Map(); // username -> timestamp
+
+        /** @type {Map<string, number>} Map of usernames to their last activity timestamp (ms). */
+        this.cursorLastActivity = new Map();
+
+        /** @type {number} Time in milliseconds before a cursor is considered inactive (10 mins). */
         this.inactivityTimeoutMs = 10 * 60 * 1000;
+
+        /** @type {number} Frequency in milliseconds to check for inactive cursors (30 secs). */
         this.inactivityCheckFrequencyMs = 30 * 1000;
+
+        /** @type {string[]} List of colors assigned to cursors */
         this.colors = [
             '#FFADAD', 
             '#CAFFBF',
@@ -36,7 +57,10 @@ class RemoteCursorManager {
     }
 
     /**
-     * Moves a remote cursor by username
+     * Moves a remote cursor identified by a username to a specific character index.
+     * If the cursor does not exist, it is created.
+     * * @param {string} username - The unique identifier for the user.
+     * @param {number} charIndex - The index in the text string where the cursor should be placed.
      */
     moveCursorByName(username, charIndex) {
         const cursor = this.#createCursorIfNotExists(username);
@@ -45,8 +69,10 @@ class RemoteCursorManager {
     }
 
     /**
-     * Synchronizes all cursors starting from the specified index with an offset
-     * Used when text is inserted or deleted to adjust cursor positions
+     * Synchronizes all cursors starting from the specified index with a given offset.
+     * Used when text is inserted or deleted to shift other users' cursors accordingly.
+     * * @param {number} index - The character index where the edit occurred.
+     * @param {number} offset - The number of characters added (positive) or removed (negative).
      */
     synchronizeCursors(index, offset) {
         const start = index;
@@ -62,7 +88,8 @@ class RemoteCursorManager {
     }
 
     /**
-     * Updates the stretcher cursor position to maintain scroll sync
+     * Updates the stretcher cursor position to the end of the text.
+     * This ensures the overlay height matches the textarea scroll height.
      */
     updateStretcher() {
         this.#moveCursor(this.stretcher, this.textArea.value.length);
@@ -70,7 +97,9 @@ class RemoteCursorManager {
     }
 
     /**
-     * Creates a hidden stretcher cursor that enables scrolling synchronization
+     * Creates a hidden stretcher cursor that enables scrolling synchronization.
+     * * @private
+     * @returns {HTMLElement} The created stretcher element.
      */
     #createStretcher() {
         const stretcher = document.createElement('div');
@@ -81,7 +110,9 @@ class RemoteCursorManager {
     }
 
     /**
-     * Starts a timer to periodically check for and remove inactive cursors
+     * Starts a periodic timer to check for and remove cursors that have been inactive
+     *  for longer than the defined timeout.
+     * * @private
      */
     #startInactivityCleanup() {
         // Check every minute for inactive cursors
@@ -103,7 +134,11 @@ class RemoteCursorManager {
     }
 
     /**
-     * Converts a character index to pixel coordinates
+     * Converts a character index to pixel coordinates (top, left) relative to the text area.
+     * Simulates text wrapping based on the column width.
+     * * @private
+     * @param {number} charIndex - The index of the character.
+     * @returns {{top: number, left: number}} The coordinates in pixels.
      */
     #indexToCoordinates(charIndex) {
         const text = this.textArea.value;
@@ -133,15 +168,19 @@ class RemoteCursorManager {
     }
 
     /**
-     * Updates the last activity timestamp for a user
+     * Updates the last activity timestamp for a specific user.
+     * * @private
+     * @param {string} username - The username to update.
      */
     #updateActivity(username) {
         this.cursorLastActivity.set(username, Date.now());
     }
 
     /**
-     * Creates a cursor for the user if it doesn't already exist
-     * Returns the existing cursor if it already exists
+     * Retrieves an existing cursor or creates a new one if it doesn't exist.
+     * * @private
+     * @param {string} username - The username associated with the cursor.
+     * @returns {HTMLElement} The cursor DOM element.
      */
     #createCursorIfNotExists(username) {
         const existingCursor = document.getElementById(`cursor-${username}`);
@@ -152,7 +191,11 @@ class RemoteCursorManager {
     }
 
     /**
-     * Creates a new remote cursor for the specified user
+     * Creates a new remote cursor DOM element for the specified user.
+     * Assigns a color from the predefined palette based on the number of active cursors.
+     * * @private
+     * @param {string} username - The username for the new cursor.
+     * @returns {HTMLElement} The newly created cursor element.
      */
     #createCursor(username) {
         const cursor = document.createElement('div');
@@ -169,7 +212,9 @@ class RemoteCursorManager {
     }
 
     /**
-     * Deletes the remote cursor for the specified user
+     * Deletes the remote cursor and activity data for the specified user.
+     * * @private
+     * @param {string} username - The username of the cursor to remove.
      */
     #deleteCursor(username) {
         const cursor = document.getElementById(`cursor-${username}`);
@@ -184,11 +229,16 @@ class RemoteCursorManager {
     }
 
     /**
-     * Moves a cursor element to the specified character index
+     * Moves a specific cursor element to the physical coordinates corresponding
+     * to the provided character index.
+     * * @private
+     * @param {HTMLElement} cursor - The cursor DOM element to move.
+     * @param {number} charIndex - The target character index.
      */
     #moveCursor(cursor, charIndex) {
         if (charIndex < 0 || charIndex > this.textArea.value.length) { 
-            console.warn(`Unable to move a remote cursor: expected a charIndex between 0 and ${this.textArea.value.length}, got ${charIndex} instead`);
+            console.warn(`Unable to move a remote cursor: expected a charIndex between 0
+                and ${this.textArea.value.length}, got ${charIndex} instead`);
             return;
         }
         
@@ -198,7 +248,8 @@ class RemoteCursorManager {
         cursor.style.top = `${top}px`;
         cursor.style.left = `${left}px`;
 
-        console.debug(`Moved ${cursor.getAttribute('data-username')} at index ${charIndex} (char before: '${this.textArea.value[charIndex - 1]}') -> {top: ${top}px, left: ${left}px}`);
+        console.debug(`Moved ${cursor.getAttribute('data-username')} at index ${charIndex} 
+            (char before: '${this.textArea.value[charIndex - 1]}') -> {top: ${top}px, left: ${left}px}`);
     }
 
 }

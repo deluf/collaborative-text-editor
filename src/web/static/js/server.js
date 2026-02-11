@@ -1,4 +1,3 @@
-
 export { Server, Edit };
 
 class Server {
@@ -6,6 +5,7 @@ class Server {
      * 
      * @param {(edit: Edit) => void} onReceiveCallback 
      */
+    // FIXME: reconnection?
     constructor(onReceiveCallback) {
         this.url = 'ws://localhost:8765'
         // Bind the onReceive function to see 'this' as the Server class, not the WebSocket class
@@ -36,9 +36,9 @@ class Server {
     /**
      * @param {Edit} edit
      */
-    send(edit) {
+    sendEdit(edit) {
         if (!edit.id) { 
-            console.warn("Id undefined, changing it to '<<EOF>>'")
+            console.warn("Got an undefined id, treating it as '<<EOF>>'")
             edit.id = "<<EOF>>";
         }
         console.info("Sending: ", edit);
@@ -49,8 +49,26 @@ class Server {
             console.error(`Socket ${this.url} is closed`);
         }
     }
+
+    // FIXME:
+    sendHeartBeat(username) {
+        const jsonString = JSON.stringify({
+            username: username,
+            action: "HEARTBEAT"
+        });
+        this.socket.send(jsonString);
+    }
+
+    // FIXME:
+    requestFullNote() {
+        const jsonString = JSON.stringify({
+            action: "SYNC"
+        });
+        this.socket.send(jsonString);
+    }
 }
 
+// FIXME: forse meglio msg generico?
 class Edit {
     /**
      * @param {Object} parameters

@@ -1,4 +1,3 @@
-
 import { fetchUsername, Note } from './common.js';
 
 import { RemoteCursorManager } from "./remoteCursorManager.js";
@@ -103,7 +102,7 @@ TEXT_AREA.addEventListener('input', (event) => {
             id: newId,
             char: TEXT_AREA.value[index]
         });
-        server.send(edit);
+        server.sendEdit(edit);
         CRDT.insert(newId);
         remoteCursorManager.synchronizeCursors(index, 1);
         updateNoteStats();
@@ -115,7 +114,7 @@ TEXT_AREA.addEventListener('input', (event) => {
             action: "DELETE",
             id: CRDT.getIdFromIndex(index)
         });
-        server.send(edit);
+        server.sendEdit(edit);
         CRDT.deleteFromIndex(index);
         remoteCursorManager.synchronizeCursors(index, -1);
         updateNoteStats();
@@ -138,7 +137,7 @@ TEXT_AREA.addEventListener('selectionchange', () => {
         action: "MOVE",
         id: CRDT.getIdFromIndex(start)
     });
-    server.send(edit);
+    server.sendEdit(edit);
 });
 
 console.info(`Loaded TEXT_AREA {
