@@ -165,6 +165,7 @@ function processIncomingRequest(edit)
             index = CRDT.insert(edit.id);
             //console.info(`${username} inserted char '${character}' at index ${index} (after char '${TEXT_AREA.value[index - 1]}')`);
             TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + edit.char + TEXT_AREA.value.slice(index);
+            // FIXME: TEXT_AREA.setRangeText(edit.char, index, index, 'end');
             remoteCursorManager.synchronizeCursors(index, +1);
             remoteCursorManager.moveCursorByName(edit.username, index + 1);
             updateNoteStats(edit.username);
