@@ -7,14 +7,17 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2]).
 
 -record(state, {
+    doc_id, 
     doc = crdt_core:new(),
     clients = []
 }).
 
+-record(editor_docs, {doc_id, content}).
+
 %%% Client API %%%
 
 start_link(DocId) ->
-    gen_server:start_link({global, {doc, DocId}}, ?MODULE, [], []).
+    gen_server:start_link({global, {doc, DocId}}, ?MODULE, [DocId], []).
 
 join(DocId, ClientPid) ->
     gen_server:cast({global, {doc, DocId}}, {join, ClientPid}).
@@ -32,9 +35,14 @@ get_text(DocId) ->
     gen_server:call({global, {doc, DocId}}, get_text).
 
 %%% GenServer Callbacks %%%
-
-init([]) ->
-    {ok, #state{}}.
+init([DocId]) ->
+    InitialDoc = case mnesia:dirty_read(editor_docs, DocId) of
+        [] -> 
+            crdt_core:new();
+        [#editor_docs{content = SavedDoc}] -> 
+            SavedDoc
+    end,
+    {ok, #state{doc_id = DocId, doc = InitialDoc}}.
 
 handle_call(get_text, _From, State) ->
     Text = crdt_core:to_string(State#state.doc),
@@ -47,11 +55,23 @@ handle_cast({join, Pid}, State) ->
 
 handle_cast({insert, Id, UserId, Char}, State) ->
     NewDoc = crdt_core:insert(State#state.doc, Id, Char),
+    
+    mnesia:dirty_write(#editor_docs{
+        doc_id = State#state.doc_id, 
+        content = NewDoc
+    }),
+    
     broadcast(State#state.clients, {insert, Id, UserId, Char}),
     {noreply, State#state{doc = NewDoc}};
 
 handle_cast({delete, Id, UserId}, State) ->
     NewDoc = crdt_core:delete(State#state.doc, Id),
+    
+    mnesia:dirty_write(#editor_docs{
+        doc_id = State#state.doc_id, 
+        content = NewDoc
+    }),
+    
     broadcast(State#state.clients, {delete, Id, UserId}),
     {noreply, State#state{doc = NewDoc}};
 
