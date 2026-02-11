@@ -14,22 +14,16 @@
 %%% Client API %%%
 
 start_link(DocId) ->
-    %% Registers globally as {doc, "DocID"}
-    %% This makes it unique across the entire cluster.
     gen_server:start_link({global, {doc, DocId}}, ?MODULE, [], []).
 
 join(DocId, ClientPid) ->
     gen_server:cast({global, {doc, DocId}}, {join, ClientPid}).
 
-%% FIXME: UserId non serve??
-add_char(DocId, PosList, UserId, Char) ->
-    ID = {PosList, UserId},
-    gen_server:cast({global, {doc, DocId}}, {insert, ID, Char}).
+add_char(DocId, ID, UserId, Char) ->
+    gen_server:cast({global, {doc, DocId}}, {insert, ID, UserId, Char}).
 
-%% FIXME: UserId non serve??
-remove_char(DocId, PosList, UserId) ->
-    ID = {PosList, UserId},
-    gen_server:cast({global, {doc, DocId}}, {delete, ID}).
+remove_char(DocId, ID, UserId) ->
+    gen_server:cast({global, {doc, DocId}}, {delete, ID, UserId}).
 
 get_text(DocId) ->
     gen_server:call({global, {doc, DocId}}, get_text).
@@ -48,14 +42,14 @@ handle_cast({join, Pid}, State) ->
     Pid ! {sync_state, State#state.doc},
     {noreply, State#state{clients = [Pid | State#state.clients]}};
 
-handle_cast({insert, ID, Char}, State) ->
+handle_cast({insert, ID, UserId, Char}, State) ->
     NewDoc = crdt_core:insert(State#state.doc, ID, Char),
-    broadcast(State#state.clients, {insert, ID, Char}),
+    broadcast(State#state.clients, {insert, ID, UserId, Char}),
     {noreply, State#state{doc = NewDoc}};
 
-handle_cast({delete, ID}, State) ->
+handle_cast({delete, ID, UserId}, State) ->
     NewDoc = crdt_core:delete(State#state.doc, ID),
-    broadcast(State#state.clients, {delete, ID}),
+    broadcast(State#state.clients, {delete, ID, UserId}),
     {noreply, State#state{doc = NewDoc}}.
 
 handle_info({'DOWN', _Ref, process, Pid, _Reason}, State) ->
