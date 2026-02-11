@@ -1,5 +1,5 @@
 
-import { fetchDisplayName, Note } from './common.js';
+import { fetchUsername, Note } from './common.js';
 
 import { RemoteCursorManager } from "./remoteCursorManager.js";
 
@@ -10,7 +10,7 @@ import { Server, Edit } from "./server.js";
 const server = new Server(processIncomingRequest);
 
 
-const DISPLAY_NAME = fetchDisplayName();
+const USERNAME = fetchUsername();
 const CONTAINER = document.getElementById('main');
 const TEXT_AREA = document.getElementById('textarea');
 const OVERLAY = document.getElementById('overlay');
@@ -18,9 +18,9 @@ const NOTE_NAME = document.getElementById('window-title');
 const LAST_UPDATE_TIMESTAMP = document.getElementById('last-update-timestamp');
 const LAST_UPDATE_USERNAME = document.getElementById('last-update-username');
 
-function updateNoteStats(displayname=DISPLAY_NAME) {
+function updateNoteStats(username=USERNAME) {
     LAST_UPDATE_TIMESTAMP.innerText = new Date().toLocaleString();
-    LAST_UPDATE_USERNAME.innerText = displayname;
+    LAST_UPDATE_USERNAME.innerText = username;
 }
 
 // Computes the width and height in pixels of a single character
@@ -98,7 +98,7 @@ TEXT_AREA.addEventListener('input', (event) => {
         index--;
         const newId = CRDT.getNewId(index);
         const edit = new Edit({
-            username: DISPLAY_NAME,
+            username: USERNAME,
             action: "INSERT",
             id: newId,
             char: TEXT_AREA.value[index]
@@ -111,7 +111,7 @@ TEXT_AREA.addEventListener('input', (event) => {
   
     if (inputType.startsWith('delete')) {
         const edit = new Edit({
-            username: DISPLAY_NAME,
+            username: USERNAME,
             action: "DELETE",
             id: CRDT.getIdFromIndex(index)
         });
@@ -134,7 +134,7 @@ TEXT_AREA.addEventListener('selectionchange', () => {
         return;
     }
     const edit = new Edit({
-        username: DISPLAY_NAME,
+        username: USERNAME,
         action: "MOVE",
         id: CRDT.getIdFromIndex(start)
     });
@@ -206,7 +206,9 @@ function loadNoteOrCreateIfNew(uuid, name) {
         if (savedNote.owned) {
             const shareNoteButton = document.getElementById('menu-bar-share');
             shareNoteButton.addEventListener('click', () => {
-                alert(`Share this URL:\n${savedNote.getShareURL()}`); 
+                const shareURL = savedNote.getShareURL();
+                alert(`Share this URL (copied to your clipboard):\n${shareURL}`); 
+                navigator.clipboard.writeText(shareURL);
             });
             shareNoteButton.className = 'menu-bar-enabled';
         }

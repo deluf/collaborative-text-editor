@@ -37,8 +37,6 @@ class Server {
      * @param {Edit} edit
      */
     send(edit) {
-        // edit.id can be undefined if for example the user is moving after the last char, 
-        //  or if the textarea is empty FIXME:
         if (!edit.id) { 
             console.warn("Id undefined, changing it to '<<EOF>>'")
             edit.id = "<<EOF>>";

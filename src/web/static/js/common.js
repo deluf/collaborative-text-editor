@@ -1,19 +1,19 @@
 
-export { LOCAL_STORAGE_KEYS, fetchDisplayName, Note };
+export { LOCAL_STORAGE_KEYS, fetchUsername, Note };
 
 const LOCAL_STORAGE_KEYS = {
-    DISPLAY_NAME: 'display-name',
+    USERNAME: 'username',
     NOTES: 'notes'
 };
 
-function fetchDisplayName() {
-    let currentDisplayName = localStorage.getItem(LOCAL_STORAGE_KEYS.DISPLAY_NAME);
-    // If the display name is already defined use that, otherwise generate it as a random integer 
-    if (!currentDisplayName) {
-        currentDisplayName = String(Math.floor(Math.random() * 1_000_000_000));
-        localStorage.setItem(LOCAL_STORAGE_KEYS.DISPLAY_NAME, currentDisplayName);
+function fetchUsername() {
+    let currentUsername = localStorage.getItem(LOCAL_STORAGE_KEYS.USERNAME);
+    // If the username is already defined use that, otherwise generate it as a random integer 
+    if (!currentUsername) {
+        currentUsername = String(Math.floor(Math.random() * 1_000_000_000));
+        localStorage.setItem(LOCAL_STORAGE_KEYS.USERNAME, currentUsername);
     }
-    return currentDisplayName;
+    return currentUsername;
 }
 
 class Note {

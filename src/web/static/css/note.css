@@ -94,10 +94,3 @@
     z-index: 3;
     box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1); 
 }
-
-#last-update-timestamp, #last-update-username {
-    padding-left: 5px;
-    padding-right: 5px;
-    color: #666666;
-}
-

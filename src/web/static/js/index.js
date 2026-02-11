@@ -1,11 +1,14 @@
-import { fetchDisplayName, LOCAL_STORAGE_KEYS, Note } from './common.js';
+import { fetchUsername, LOCAL_STORAGE_KEYS, Note } from './common.js';
 
-const displayNameInput = document.getElementById('display-name');
-displayNameInput.value = fetchDisplayName();
+const usernameSpan = document.getElementById('username');
+usernameSpan.innerText = fetchUsername();
 
-// Event listener that saves manual changes to the display name in the local storage
-displayNameInput.addEventListener('input', (event) => {
-    localStorage.setItem(LOCAL_STORAGE_KEYS.DISPLAY_NAME, event.target.value);
+// Event listener that saves manual changes to the username in the local storage
+usernameSpan.addEventListener('click', () => {
+    const newUsername = prompt('Enter a new username:', '');
+    if (newUsername === null) return; // User cancelled prompt
+    localStorage.setItem(LOCAL_STORAGE_KEYS.USERNAME, newUsername);
+    usernameSpan.innerText = newUsername;
 });
 
 

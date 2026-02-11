@@ -49,11 +49,6 @@
 .owned-note-icon { background-image: url("/static/media/owned.png"); }
 .shared-note-icon { background-image: url("/static/media/shared.png"); }
 
-#display-name {
-    margin-top: 2px;
-    margin-left: 4px;
-    outline: none;
-    border: none;
-    background-color: inherit;
+#username {
+    cursor: pointer;
 }
-
