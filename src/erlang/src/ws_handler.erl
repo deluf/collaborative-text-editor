@@ -82,7 +82,7 @@ websocket_info({move, User, Id}, State) ->
     {reply, {text, jsx:encode(Resp)}, State};
 
 websocket_info({sync_state, Doc}, State) ->
-    JsonList = [ #{id => P, char => C} || {P, C} <- Doc ],
+    JsonList = [ #{id => P, char => C} || {P, C} <- lists:sort(Doc) ],
     Resp = #{
         action => <<"sync">>, 
         data => JsonList
