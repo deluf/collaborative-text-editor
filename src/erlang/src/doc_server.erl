@@ -21,10 +21,12 @@ start_link(DocId) ->
 join(DocId, ClientPid) ->
     gen_server:cast({global, {doc, DocId}}, {join, ClientPid}).
 
+%% FIXME: UserId non serve??
 add_char(DocId, PosList, UserId, Char) ->
     ID = {PosList, UserId},
     gen_server:cast({global, {doc, DocId}}, {insert, ID, Char}).
 
+%% FIXME: UserId non serve??
 remove_char(DocId, PosList, UserId) ->
     ID = {PosList, UserId},
     gen_server:cast({global, {doc, DocId}}, {delete, ID}).

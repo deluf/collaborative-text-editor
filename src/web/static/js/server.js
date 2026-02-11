@@ -5,9 +5,10 @@ class Server {
      * 
      * @param {(edit: Edit) => void} onReceiveCallback 
      */
-    // FIXME: reconnection?
-    constructor(onReceiveCallback) {
-        this.url = 'ws://localhost:8765'
+    // FIXME: reconnection? (timeout is 60s on erlang)
+    // FIXME: bug strano del client dopo una delete ricopia tutto??
+    constructor(noteUuid, onReceiveCallback) {
+        this.url = `ws://localhost:8086/${noteUuid}`;
         // Bind the onReceive function to see 'this' as the Server class, not the WebSocket class
         this.onReceive = this.onReceive.bind(this);
         this.onReceiveCallback = onReceiveCallback;
@@ -50,7 +51,7 @@ class Server {
         }
     }
 
-    // FIXME:
+    // FIXME: c'è già il timeout di cowboy...
     sendHeartBeat(username) {
         const jsonString = JSON.stringify({
             username: username,
@@ -59,10 +60,10 @@ class Server {
         this.socket.send(jsonString);
     }
 
-    // FIXME:
+    // FIXME: non penso serva
     requestFullNote() {
         const jsonString = JSON.stringify({
-            action: "SYNC"
+            action: "sync"
         });
         this.socket.send(jsonString);
     }

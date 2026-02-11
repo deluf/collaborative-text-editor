@@ -6,7 +6,6 @@ import { SimpleCRDT } from "./simpleCRDT.js";
 const CRDT = new SimpleCRDT();
 
 import { Server, Edit } from "./server.js";
-const server = new Server(processIncomingRequest);
 
 
 const USERNAME = fetchUsername();
@@ -98,7 +97,7 @@ TEXT_AREA.addEventListener('input', (event) => {
         const newId = CRDT.getNewId(index);
         const edit = new Edit({
             username: USERNAME,
-            action: "INSERT",
+            action: "insert",
             id: newId,
             char: TEXT_AREA.value[index]
         });
@@ -111,7 +110,7 @@ TEXT_AREA.addEventListener('input', (event) => {
     if (inputType.startsWith('delete')) {
         const edit = new Edit({
             username: USERNAME,
-            action: "DELETE",
+            action: "delete",
             id: CRDT.getIdFromIndex(index)
         });
         server.sendEdit(edit);
@@ -134,7 +133,7 @@ TEXT_AREA.addEventListener('selectionchange', () => {
     }
     const edit = new Edit({
         username: USERNAME,
-        action: "MOVE",
+        action: "move",
         id: CRDT.getIdFromIndex(start)
     });
     server.sendEdit(edit);
@@ -156,11 +155,14 @@ console.info(`Loaded TEXT_AREA {
  */
 function processIncomingRequest(edit) 
 {
-
+    if (edit.username === USERNAME) {
+        console.warn("Ignored mirrored update: ", edit);
+        return;
+    }
     let index;
     switch (edit.action) 
     {
-        case 'INSERT':
+        case 'insert':
             index = CRDT.insert(edit.id);
             //console.info(`${username} inserted char '${character}' at index ${index} (after char '${TEXT_AREA.value[index - 1]}')`);
             TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + edit.char + TEXT_AREA.value.slice(index);
@@ -169,7 +171,7 @@ function processIncomingRequest(edit)
             remoteCursorManager.moveCursorByName(edit.username, index + 1);
             updateNoteStats(edit.username);
             break;
-        case 'DELETE':
+        case 'delete':
             index = CRDT.deleteFromId(edit.id);
             //console.info(`${username} deleted char '${TEXT_AREA.value[index]}' at index ${index}`);
             TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + TEXT_AREA.value.slice(index + 1);
@@ -177,11 +179,12 @@ function processIncomingRequest(edit)
             remoteCursorManager.moveCursorByName(edit.username, index);
             updateNoteStats(edit.username);
             break;
-        case 'MOVE':
+        case 'move':
             index = CRDT.getIndexFromId(edit.id);
             //console.info(`${username} moved at index ${index}`);
             remoteCursorManager.moveCursorByName(edit.username, index);
             break;
+            // FIXME: action 'sync', data = [{id, char}, {id, char}, ...]
         default:
             console.warn(`Received unknown action '${edit.action}' from user '${edit.username}'`);
             return;
@@ -233,7 +236,9 @@ function loadNoteOrCreateIfNew(uuid, name) {
 const params = new URLSearchParams(window.location.search);
 const uuid = params.get('uuid');
 const name = params.get('name');
-loadNoteOrCreateIfNew(uuid, name)
+loadNoteOrCreateIfNew(uuid, name);
+
+const server = new Server(uuid, processIncomingRequest);
 
 
 const deleteNoteButton = document.getElementById('menu-bar-delete');

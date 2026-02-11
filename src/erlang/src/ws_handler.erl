@@ -45,19 +45,19 @@ websocket_handle({text, Json}, State) ->
     %% Decode JSON to a map
     Map = jsx:decode(Json, [return_maps]),
 
-    %% Check the "type" field to decide what to do
-    case maps:get(<<"type">>, Map) of
+    %% Check the "action" field to decide what to do
+    case maps:get(<<"action">>, Map) of
         
         <<"insert">> ->
             Char = maps:get(<<"char">>, Map),
-            Pos  = maps:get(<<"pos">>, Map),
-            User = maps:get(<<"user">>, Map),
-            doc_server:add_char(DocId, Pos, User, Char);
+            Id  = maps:get(<<"id">>, Map),
+            Username = maps:get(<<"username">>, Map),
+            doc_server:add_char(DocId, Id, Username, Char);
 
         <<"delete">> ->
-            Pos  = maps:get(<<"pos">>, Map),
-            User = maps:get(<<"user">>, Map),
-            doc_server:remove_char(DocId, Pos, User);
+            Id  = maps:get(<<"id">>, Map),
+            Username = maps:get(<<"username">>, Map),
+            doc_server:remove_char(DocId, Id, Username);
 
         _ -> 
             %% Ignore unknown message types
@@ -76,22 +76,22 @@ websocket_handle(_Data, State) ->
 %% These messages are sent by doc_server to this process (self())
 
 %% Case 1: Another user inserted a character
-websocket_info({insert, {Pos, User}, Char}, State) ->
+websocket_info({insert, {Id, Username}, Char}, State) ->
     Resp = #{
-        type => <<"insert">>,
-        pos  => Pos, 
-        user => User, 
+        action => <<"insert">>,
+        id  => Id, 
+        username => Username, 
         char => Char
     },
     Json = jsx:encode(Resp),
     {reply, {text, Json}, State};
 
 %% Case 2: Another user deleted a character
-websocket_info({delete, {Pos, User}}, State) ->
+websocket_info({delete, {Id, Username}}, State) ->
     Resp = #{
-        type => <<"delete">>, 
-        pos  => Pos, 
-        user => User
+        action => <<"delete">>, 
+        id  => Id, 
+        username => Username
     },
     Json = jsx:encode(Resp),
     {reply, {text, Json}, State};
@@ -99,10 +99,10 @@ websocket_info({delete, {Pos, User}}, State) ->
 %% Case 3: Initial sync when joining
 websocket_info({sync_state, Doc}, State) ->
     %% Convert the internal doc representation to a list of JSON objects
-    JsonList = [ #{pos => P, user => U, char => C} || {{P, U}, C} <- Doc ],
+    JsonList = [ #{id => I, username => U, char => C} || {{I, U}, C} <- Doc ],
     
     Resp = #{
-        type => <<"sync">>, 
+        action => <<"sync">>, 
         data => JsonList
     },
     Json = jsx:encode(Resp),

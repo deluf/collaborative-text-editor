@@ -8,13 +8,13 @@ start(_StartType, _StartArgs) ->
     %% This matches the binding 'doc_id' used in ws_handler:init/2
     Dispatch = cowboy_router:compile([
         {'_', [
-            {"/ws/:doc_id", ws_handler, []}
+            {"/:doc_id", ws_handler, []}
         ]}
     ]),
 
-    %% Start Cowboy HTTP listener on port 8080
+    %% Start Cowboy HTTP listener on port 8086
     {ok, _} = cowboy:start_clear(http_listener,
-        [{port, 8080}],
+        [{port, 8086}],
         #{env => #{dispatch => Dispatch}}
     ),
 
