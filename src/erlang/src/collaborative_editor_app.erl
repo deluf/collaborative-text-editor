@@ -46,4 +46,4 @@ init_mnesia() ->
     end,
     
     %% 3. Wait for tables to be accessible
-    mnesia:wait_for_tables([editor_docs], 5000).
+    mnesia:wait_for_tables([editor_docs], infinity).
