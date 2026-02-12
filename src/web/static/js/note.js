@@ -290,10 +290,10 @@ renameNoteButton.className = 'menu-bar-enabled';
 //console.warn("Got an undefined id, treating it as '<<EOF>>'")
 //edit.id = "<<EOF>>";
 
-// FIXME: c'è ancora qualche off-by-one nei cursori - provare la scrollbar
-// FIXME: scroll non funziona su windows?
 
+// FIXME: scroll non funziona su windows?
 // FIXME: i think we can receive a move (or delete?) for a char that does not exist yet
+
 
 // FIXME: for debug - to remove
 document.getElementById("clippy").addEventListener("click", () => {

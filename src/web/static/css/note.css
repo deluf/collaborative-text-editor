@@ -41,6 +41,11 @@
     z-index: 2;
     /* Let clicks pass through to textarea */
     pointer-events: none;
+    overflow: hidden;
+}
+
+#mirror {
+    visibility: hidden;
 }
 
 /* Remote cursor (a vertical line) */

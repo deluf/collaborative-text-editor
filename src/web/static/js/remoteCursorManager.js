@@ -38,7 +38,7 @@ class RemoteCursorManager {
             '#BDB2FF',
             '#FFD6A5',
             '#9BF6FF',
-            '#FDFFB6',
+            '#E1E575',
             '#FFC6FF'
         ];
 
@@ -62,6 +62,7 @@ class RemoteCursorManager {
         const cursor = this.#createCursorIfNotExists(username);
         this.#moveCursor(cursor, charIndex);
         this.#updateActivity(cursor);
+        this.updateStretcher(); // FIXME: inefficient?
     }
 
     /**
@@ -102,6 +103,7 @@ class RemoteCursorManager {
         this.#moveCursor(this.stretcher, this.textArea.value.length);
         const currentTop = parseInt(this.stretcher.style.top) || 0;
         this.stretcher.style.top = `${currentTop + this.padding}px`;
+        console.error("UPDATED STRETCHER!!!!");
     }
 
     /**
