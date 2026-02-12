@@ -23,17 +23,14 @@ class RemoteCursorManager {
         this.padding = padding;
         this.cols = cols;
 
-        /** @type {HTMLElement[]} List of active cursor DOM elements. */
-        this.activeCursors = [];
+        /** @type {Map<HTMLElement, number>} Maps each (active) cursor to their last activity timestamp (ms) */
+        this.activeCursors = new Map();
 
-        /** @type {Map<string, number>} Map of usernames to their last activity timestamp (ms). */
-        this.cursorLastActivity = new Map();
+        // Time in milliseconds before a cursor is considered inactive (5 mins)
+        this.inactivityTimeoutMs = 5 * 30 * 1000;
 
-        /** @type {number} Time in milliseconds before a cursor is considered inactive (10 mins). */
-        this.inactivityTimeoutMs = 10 * 60 * 1000;
-
-        /** @type {number} Frequency in milliseconds to check for inactive cursors (30 secs). */
-        this.inactivityCheckFrequencyMs = 30 * 1000;
+        // Frequency in milliseconds to check for inactive cursors
+        this.inactivityCheckFrequencyMs = this.inactivityTimeoutMs / 10;
 
         /** @type {string[]} List of colors assigned to cursors */
         this.colors = [
@@ -68,20 +65,20 @@ class RemoteCursorManager {
     moveCursorByName(username, charIndex) {
         const cursor = this.#createCursorIfNotExists(username);
         this.#moveCursor(cursor, charIndex);
-        this.#updateActivity(username);
+        this.#updateActivity(cursor);
     }
 
     /**
      * Synchronizes all cursors starting from the specified index with a given offset.
      * Used when text is inserted or deleted to shift other users' cursors accordingly.
      * * @param {number} index - The character index where the edit occurred.
-     * @param {number} offset - The number of characters added (positive) or removed (negative).
+     * @param {number} offset - The number of characters added (positive) or removed (negative). Must be either -1 or +1!
      */
     synchronizeCursors(index, offset) {
         const start = index;
         const end = this.textArea.value.length - 1;
         
-        for (const cursor of this.activeCursors) {
+        for (const cursor of this.activeCursors.keys()) {
             const currentIndex = parseInt(cursor.getAttribute('data-index') || '0');
             if (currentIndex >= start && currentIndex <= end) {
                 const newIndex = Math.min(this.textArea.value.length, currentIndex + offset);
@@ -95,7 +92,7 @@ class RemoteCursorManager {
      * Use this to reset the collaborative state or clean up when disconnecting.
      */
     deleteAll() {
-        for (const cursor of this.activeCursors) {
+        for (const cursor of this.activeCursors.keys()) {
             this.#deleteCursor(cursor);
         }
     }    
@@ -106,7 +103,8 @@ class RemoteCursorManager {
      */
     updateStretcher() {
         this.#moveCursor(this.stretcher, this.textArea.value.length);
-        this.stretcher.style.top = `${parseInt(this.stretcher.style.top) + this.padding}px`;
+        const currentTop = parseInt(this.stretcher.style.top) || 0;
+        this.stretcher.style.top = `${currentTop + this.padding}px`;
     }
 
     /**
@@ -131,17 +129,11 @@ class RemoteCursorManager {
         // Check every minute for inactive cursors
         this.cleanupInterval = setInterval(() => {
             const now = Date.now();
-            const usersToRemove = [];
-            
-            for (const [username, lastActivity] of this.cursorLastActivity.entries()) {
+            for (const [cursor, lastActivity] of this.activeCursors.entries()) {
                 if (now - lastActivity > this.inactivityTimeoutMs) {
-                    usersToRemove.push(username);
+                    console.info(`Removing inactive cursor for user: ${cursor.getAttribute("data-username")}`);
+                    this.#deleteCursor(cursor);
                 }
-            }
-            
-            for (const username of usersToRemove) {
-                console.info(`Removing inactive cursor for user: ${username}`);
-                this.#deleteCursorByUsername(username);
             }
         }, this.inactivityCheckFrequencyMs); // Check every minute
     }
@@ -181,12 +173,12 @@ class RemoteCursorManager {
     }
 
     /**
-     * Updates the last activity timestamp for a specific user.
+     * Updates the last activity timestamp for a specific cursor.
      * * @private
-     * @param {string} username - The username to update.
+     * @param {HTMLElement} cursor - The cursor DOM element.
      */
-    #updateActivity(username) {
-        this.cursorLastActivity.set(username, Date.now());
+    #updateActivity(cursor) {
+        this.activeCursors.set(cursor, Date.now());
     }
 
     /**
@@ -216,22 +208,11 @@ class RemoteCursorManager {
         cursor.className = 'remote-cursor';
         cursor.setAttribute('data-username', username);
         cursor.setAttribute('data-index', '0');
-        cursor.style.backgroundColor = this.colors[this.activeCursors.length % this.colors.length + this.colorOffset];
+        cursor.style.backgroundColor = this.colors[(this.activeCursors.size + this.colorOffset) % this.colors.length];
         this.overlay.appendChild(cursor);
-        this.activeCursors.push(cursor);
-        this.#updateActivity(username);
+        this.#updateActivity(cursor);
         console.info(`Created cursor for user ${username}`)
         return cursor;
-    }
-
-    /**
-     * Deletes the remote cursor for the specified user.
-     * * @private
-     * @param {string} username - The username of the cursor to remove.
-     */
-    #deleteCursorByUsername(username) {
-        const cursor = document.getElementById(`cursor-${username}`);
-        this.#deleteCursor(cursor);
     }
 
     /**
@@ -240,14 +221,8 @@ class RemoteCursorManager {
      * @param {HTMLElement} cursor - The cursor to remove.
      */
     #deleteCursor(cursor) {
-        const index = this.activeCursors.indexOf(cursor);
-        if (cursor) { 
-            cursor.remove(); 
-        }
-        if (index > -1) { 
-            this.activeCursors.splice(index, 1); 
-        }
-        this.cursorLastActivity.delete(username);
+        this.activeCursors.delete(cursor);
+        cursor.remove();
     }
 
     /**
