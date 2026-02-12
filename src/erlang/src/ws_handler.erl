@@ -79,11 +79,13 @@ websocket_info({move, User, Id}, State) ->
     },
     {reply, {text, jsx:encode(Resp)}, State};
 
-websocket_info({sync_state, Doc}, State) ->
-    JsonList = [ #{id => P, char => C} || {P, C} <- lists:sort(Doc) ],
+websocket_info({sync_state, Doc, Cursors}, State) ->
+    DocJson = [ #{id => P, char => C} || {P, C} <- lists:sort(Doc) ],
+    CursorJson = [ #{username => U, id => P} || {U, P} <- Cursors ],
     Resp = #{
         action => <<"sync">>, 
-        data => JsonList
+        data => DocJson,
+        cursors => CursorJson
     },
     {reply, {text, jsx:encode(Resp)}, State};
 

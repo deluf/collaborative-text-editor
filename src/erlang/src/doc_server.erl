@@ -11,30 +11,11 @@
 -record(state, {
     doc_id, 
     doc = crdt_core:new(),
+    cursors = #{},
     clients = []
 }).
 
 -record(editor_docs, {doc_id, content}).
-
-%%% Client API %%%
-
-start_link(DocId) ->
-    gen_server:start_link({global, {doc, DocId}}, ?MODULE, [DocId], []).
-
-join(DocId, ClientPid) ->
-    gen_server:cast({global, {doc, DocId}}, {join, ClientPid}).
-
-add_char(DocId, SenderPid, Id, UserId, Char) ->
-    gen_server:cast({global, {doc, DocId}}, {insert, SenderPid, Id, UserId, Char}).
-
-remove_char(DocId, SenderPid, Id, UserId) ->
-    gen_server:cast({global, {doc, DocId}}, {delete, SenderPid, Id, UserId}).
-
-move_cursor(DocId, SenderPid, UserId, Pos) ->
-    gen_server:cast({global, {doc, DocId}}, {move, SenderPid, UserId, Pos}).
-
-get_text(DocId) ->
-    gen_server:call({global, {doc, DocId}}, get_text).
 
 %%% GenServer Callbacks %%%
 init([DocId]) ->
@@ -42,7 +23,7 @@ init([DocId]) ->
         [] -> crdt_core:new();
         [#editor_docs{content = SavedDoc}] -> SavedDoc
     end,
-    {ok, #state{doc_id = DocId, doc = InitialDoc}}.
+    {ok, #state{doc_id = DocId, doc = InitialDoc, cursors = #{}}}.
 
 handle_call(get_text, _From, State) ->
     Text = crdt_core:to_string(State#state.doc),
@@ -50,7 +31,8 @@ handle_call(get_text, _From, State) ->
 
 handle_cast({join, Pid}, State) ->
     erlang:monitor(process, Pid),
-    Pid ! {sync_state, State#state.doc},
+    CursorList = maps:to_list(State#state.cursors),
+    Pid ! {sync_state, State#state.doc, CursorList},
     {noreply, State#state{clients = [Pid | State#state.clients]}};
 
 handle_cast({insert, SenderPid, Id, UserId, Char}, State) ->
@@ -64,8 +46,9 @@ handle_cast({delete, SenderPid, Id, UserId}, State) ->
     {noreply, State#state{doc = NewDoc}};
 
 handle_cast({move, SenderPid, UserId, Pos}, State) ->
+    NewCursors = maps:put(UserId, Pos, State#state.cursors),
     broadcast(State#state.clients, SenderPid, {move, UserId, Pos}),
-    {noreply, State}.
+    {noreply, State#state{cursors = NewCursors}}.
 
 handle_info({'DOWN', _Ref, process, Pid, _Reason}, State) ->
     NewClients = lists:delete(Pid, State#state.clients),
@@ -85,8 +68,5 @@ handle_info(_Msg, State) ->
 
 broadcast(Clients, SenderPid, Msg) ->
     lists:foreach(fun(Pid) -> 
-        if 
-            Pid =/= SenderPid -> Pid ! Msg;
-            true -> ok
-        end 
+        if Pid =/= SenderPid -> Pid ! Msg; true -> ok end 
     end, Clients).
