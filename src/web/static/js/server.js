@@ -12,31 +12,28 @@ export { Server, Edit, Sync };
  */
 class Server {
 
+    /** @private Configuration constants for the reconnection strategy */
+    static #BASE_RECONNECT_DELAY_MS = 1000; // Start with 1 second
+    static #MAX_RECONNECT_DELAY_MS = 30000; // Cap at 30 seconds
+    static #BACKOFF_FACTOR = 2;             // Exponential backoff
+
     /**
      * Creates an instance of the Server.
      * * @param {string} noteUUID - The unique identifier of the note to connect to.
      * @param {function(Edit): void} onEditMessageReceived - Callback function invoked when a valid edit message is received.
      * @param {function(Sync): void} onSyncMessageReceived - Callback function invoked when a valid sync message is received.
      */
-    constructor(noteUUID, onEditMessageReceived, onSyncMessageReceived) {
-        const hostname = window.location.hostname;
-        const port = 8086;
+    constructor(hostname, port, noteUUID, onEditMessageReceived, onSyncMessageReceived) {
         this.url = `ws://${hostname}:${port}/${noteUUID}`;
-
         this.onEditMessageReceived = onEditMessageReceived;
         this.onSyncMessageReceived = onSyncMessageReceived;
 
         // Bind methods to ensure 'this' refers to the Server instance, not the WebSocket class
-        this.onReceive = this.onReceive.bind(this);
-        this.onOpen = this.onOpen.bind(this);
-        this.onClose = this.onClose.bind(this);
+        this.onReceive = this.#onReceive.bind(this);
+        this.onOpen = this.#onOpen.bind(this);
+        this.onClose = this.#onClose.bind(this);
 
-        // Configuration for reconnection strategy
-        this.BASE_RECONNECT_DELAY_MS = 1000; // Start with 1 second
-        this.MAX_RECONNECT_DELAY_MS = 30000; // Cap at 30 seconds
-        this.BACKOFF_FACTOR = 2;             // Exponential backoff
-
-        this.reconnectDelay = this.BASE_RECONNECT_DELAY_MS;
+        this.reconnectDelay = Server.#BASE_RECONNECT_DELAY_MS;
         this.reconnectTimeoutId = null;
 
         /** @type {Edit[]} */
@@ -47,6 +44,24 @@ class Server {
         this.validateEditMessage = ajv.compile(editMessageSchema);
 
         this.#connect();
+    }
+
+    /**
+     * Sends an Edit object to the server.
+     * If the socket is closed, the edit is queued to be sent upon reconnection.
+     * * @param {Edit} edit - The edit object to send.
+     */
+    sendEdit(edit) {
+        if (this.socket.readyState === WebSocket.OPEN) {
+            console.info("Sending: ", edit);
+            const jsonString = JSON.stringify(edit);
+            this.socket.send(jsonString);
+        } 
+        else {
+            this.editsQueue.push(edit);
+            console.warn(`Unable to send edit: socket ${this.url} is closed.` + 
+                `There are ${this.editsQueue.length} edits in queue`);
+        }
     }
 
     /**
@@ -72,7 +87,7 @@ class Server {
      * Resets reconnection delays and attempts to flush any queued edits.
      * @private
      */
-    onOpen() {
+    #onOpen() {
         console.info(`Connected to ${this.url}`);
         
         // Clear the reconnect timer
@@ -82,7 +97,7 @@ class Server {
         }
 
         // Reset the reconnection delay
-        this.reconnectDelay = this.BASE_RECONNECT_DELAY_MS;
+        this.reconnectDelay = Server.#BASE_RECONNECT_DELAY_MS;
         
         // Flush queued edits (if any)
         if (this.editsQueue.length > 0) {
@@ -99,10 +114,10 @@ class Server {
      * Initiates the reconnection process using an exponential backoff strategy.
      * @private
      */
-    onClose() {
+    #onClose() {
         console.warn(`Socket closed unexpectedly - reconnecting in ${this.reconnectDelay} ms ...`);
         this.reconnectTimeoutId = setTimeout(() => {
-            this.reconnectDelay = Math.min(this.reconnectDelay * this.BACKOFF_FACTOR, this.MAX_RECONNECT_DELAY_MS);
+            this.reconnectDelay = Math.min(this.reconnectDelay * Server.#BACKOFF_FACTOR, Server.#MAX_RECONNECT_DELAY_MS);
             this.#connect();
         }, this.reconnectDelay);
     }
@@ -113,7 +128,7 @@ class Server {
      * and triggers the appropriate callback.
      * * @param {MessageEvent} event - The WebSocket message event.
      */
-    onReceive(event) {
+    #onReceive(event) {
         let data;
         try { data = JSON.parse(event.data); } 
         catch (error) { console.error(`Error parsing incoming message: ${error}`); }
@@ -123,29 +138,6 @@ class Server {
         else {
             console.warn("Received unknown message format: ", data);
             return;
-        }
-    }
-
-    /**
-     * Sends an Edit object to the server.
-     * If the socket is closed, the edit is queued to be sent upon reconnection.
-     * * @param {Edit} edit - The edit object to send.
-     */
-    sendEdit(edit) {
-        if (!edit.id) {
-            console.warn("Got an undefined id, aborting the send...", edit);
-            return;
-        }
-
-        if (this.socket.readyState === WebSocket.OPEN) {
-            console.info("Sending: ", edit);
-            const jsonString = JSON.stringify(edit);
-            this.socket.send(jsonString);
-        } 
-        else {
-            this.editsQueue.push(edit);
-            console.warn(`Unable to send edit: socket ${this.url} is closed.` + 
-                `There are ${this.editsQueue.length} edits in queue`);
         }
     }
 

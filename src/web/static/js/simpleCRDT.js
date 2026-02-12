@@ -10,6 +10,9 @@ export { SimpleCRDT };
  */
 class SimpleCRDT {
 
+    /** @private Fractional ID assigned to the end of the note */
+    static #EOF_MARKER = "<<EOF>>";
+
     /**
      * Initializes the SimpleCRDT instance with an empty list of IDs.
      */
@@ -30,7 +33,8 @@ class SimpleCRDT {
      */
     getNewId(index) {
         const prevId = this.getIdFromIndex(index - 1);
-        const nextId = this.getIdFromIndex(index);
+        let nextId = this.getIdFromIndex(index);
+        nextId = nextId === SimpleCRDT.#EOF_MARKER ? undefined : nextId;
         const newId = generateKeyBetween(prevId, nextId);
         return newId;
     }
@@ -71,6 +75,7 @@ class SimpleCRDT {
      * @returns {number} The index of the ID in the list.
      */
     getIndexFromId(id) {
+        if (id === SimpleCRDT.#EOF_MARKER) { return this.ids.length; }
         return this.#binarySearch(id);
     }
 
@@ -80,6 +85,7 @@ class SimpleCRDT {
      * @returns {string} The fractional ID at that index.
      */
     getIdFromIndex(index) {
+        if (index === this.ids.length) { return SimpleCRDT.#EOF_MARKER; }
         return this.ids[index];
     }
 
