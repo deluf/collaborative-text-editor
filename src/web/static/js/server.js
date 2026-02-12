@@ -19,7 +19,10 @@ class Server {
      * @param {function(Sync): void} onSyncMessageReceived - Callback function invoked when a valid sync message is received.
      */
     constructor(noteUUID, onEditMessageReceived, onSyncMessageReceived) {
-        this.url = `ws://localhost:8086/${noteUUID}`;
+        const hostname = window.location.hostname;
+        const port = 8086;
+        this.url = `ws://${hostname}:${port}/${noteUUID}`;
+
         this.onEditMessageReceived = onEditMessageReceived;
         this.onSyncMessageReceived = onSyncMessageReceived;
 
@@ -111,17 +114,15 @@ class Server {
      * * @param {MessageEvent} event - The WebSocket message event.
      */
     onReceive(event) {
-        try {
-            const data = JSON.parse(event.data);
-            if (this.validateEditMessage(data)) { this.onEditMessageReceived(data); }
-            else if (this.validateSyncMessage(data)) { this.onSyncMessageReceived(data); }
-            else {
-                console.warn("Received unknown message format: ", data);
-                return;
-            }
-        } 
-        catch (error) {
-            console.error(`Error parsing incoming message: ${error}`);
+        let data;
+        try { data = JSON.parse(event.data); } 
+        catch (error) { console.error(`Error parsing incoming message: ${error}`); }
+
+        if (this.validateEditMessage(data)) { this.onEditMessageReceived(data); }
+        else if (this.validateSyncMessage(data)) { this.onSyncMessageReceived(data); }
+        else {
+            console.warn("Received unknown message format: ", data);
+            return;
         }
     }
 
@@ -135,7 +136,7 @@ class Server {
             // FIXME:
             //console.warn("Got an undefined id, treating it as '<<EOF>>'")
             //edit.id = "<<EOF>>";
-            console.warn("Got an undefined id, aborting the send...");
+            console.warn("Got an undefined id, aborting the send...", edit);
             return;
         }
 
