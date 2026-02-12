@@ -53,7 +53,8 @@ class SimpleCRDT {
      */
     deleteFromId(id) {
         const index = this.#binarySearch(id);
-        return this.deleteFromIndex(index);
+        this.deleteFromIndex(index);
+        return index;
     }
 
     /**

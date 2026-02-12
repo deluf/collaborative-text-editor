@@ -187,9 +187,7 @@ function processIncomingEditMessage(edit)
             console.debug(`${edit.username} moved at index ${index}`);
             remoteCursorManager.moveCursorByName(edit.username, index);
             break;
-            // FIXME: il user tag è sotto alla menu bar
             // FIXME: c'è ancora qualche off-by-one nei cursori - provare la scrollbar
-                // FIXME: bug strano del client dopo una delete ricopia tutto??
         default:
             console.warn(`Received unknown action '${edit.action}' from user '${edit.username}'`);
             return;
@@ -206,10 +204,10 @@ function processIncomingSyncMessage(sync) {
     TEXT_AREA.value = "";
     CRDT.clear();
     for (const delta of sync.data) {
-        index = CRDT.insert(delta.id);
+        let index = CRDT.insert(delta.id);
         TEXT_AREA.setRangeText(delta.char, index, index, 'end');
     }
-    updateNoteStats("< Server >");
+    updateNoteStats("<SERVER>");
 }
 
 
@@ -285,11 +283,7 @@ renameNoteButton.addEventListener('click', () => {
 renameNoteButton.className = 'menu-bar-enabled';
 
 
-
-
-
-// FIXME: demo 
-// TEXT_AREA.value = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam nec finibus magna. Etiam eu ligula tincidunt, ornare odio eu, cursus ex. In erat nibh, blandit sed vestibulum eget, ultricies pellentesque lectus. Curabitur non felis risus. Aenean quis convallis sem. Mauris vel convallis ipsum. Aenean magna leo, facilisis quis quam sed, venenatis aliquam metus.\n\nInteger viverra sit amet sapien vitae bibendum. Maecenas vitae vehicula mi, sed venenatis odio. Morbi volutpat porttitor ultrices. Cras velit libero, gravida eget imperdiet eu, finibus sit amet arcu. Sed gravida convallis eros eget interdum. Vivamus ut purus in augue cursus semper. Donec tristique dui luctus, egestas enim sit amet, consequat justo.\n\nSuspendisse a ex convallis, fringilla felis sed, finibus lectus. Morbi vel sem sit amet leo volutpat ullamcorper eu tristique nisl. Proin at tortor viverra, tincidunt nulla vitae, porta erat. Nullam at dui ac ligula accumsan hendrerit at a nisl. Donec ex sapien, elementum sed lorem quis, fringilla egestas purus. Sed condimentum iaculis interdum. Praesent volutpat massa purus, sit amet euismod orci sagittis sit amet. Etiam bibendum ut sapien non dictum. Duis a tristique lacus. Mauris sed vestibulum lorem. Phasellus luctus libero at nunc cursus, vel facilisis dolor scelerisque. Mauris consectetur vitae enim a fermentum. Fusce vel suscipit quam, ac pharetra purus.";
+// FIXME: for debug - to remove
 document.getElementById("clippy").addEventListener("click", () => {
     for (let i = 0; i < CRDT.ids.length; i++) {
         console.log(` index: ${i} ('${TEXT_AREA.value[i]}') --> id '${CRDT.ids[i]}' `)
