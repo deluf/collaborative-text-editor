@@ -187,7 +187,6 @@ function processIncomingEditMessage(edit)
             console.debug(`${edit.username} moved at index ${index}`);
             remoteCursorManager.moveCursorByName(edit.username, index);
             break;
-            // FIXME: c'è ancora qualche off-by-one nei cursori - provare la scrollbar
         default:
             console.warn(`Received unknown action '${edit.action}' from user '${edit.username}'`);
             return;
@@ -282,6 +281,13 @@ renameNoteButton.addEventListener('click', () => {
 });
 renameNoteButton.className = 'menu-bar-enabled';
 
+
+// FIXME: in server.sendEdit()
+//console.warn("Got an undefined id, treating it as '<<EOF>>'")
+//edit.id = "<<EOF>>";
+
+// FIXME: c'è ancora qualche off-by-one nei cursori - provare la scrollbar
+// FIXME: scroll non funziona su windows?
 
 // FIXME: for debug - to remove
 document.getElementById("clippy").addEventListener("click", () => {

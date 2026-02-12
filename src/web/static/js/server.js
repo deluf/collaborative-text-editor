@@ -133,9 +133,6 @@ class Server {
      */
     sendEdit(edit) {
         if (!edit.id) {
-            // FIXME:
-            //console.warn("Got an undefined id, treating it as '<<EOF>>'")
-            //edit.id = "<<EOF>>";
             console.warn("Got an undefined id, aborting the send...", edit);
             return;
         }
