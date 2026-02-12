@@ -6,31 +6,27 @@ export { RemoteCursorManager };
  */
 class RemoteCursorManager {
 
+    /** @private Time in milliseconds before a cursor is considered inactive (5 mins). */
+    static #INACTIVITY_TIMEOUT_MS = 5 * 30 * 1000;
+
+    /** @private Frequency in milliseconds to check for inactive cursors. */
+    static #INACTIVITY_CHECK_FREQUENCY_MS = RemoteCursorManager.#INACTIVITY_TIMEOUT_MS / 10;
+
     /**
      * Creates an instance of RemoteCursorManager.
      * * @param {HTMLTextAreaElement} textArea - The text area element where editing occurs.
      * @param {HTMLElement} overlay - The overlay container where cursor elements are appended.
-     * @param {Object} charSize - The dimensions of a single character.
-     * @param {number} charSize.width - The width of a character in pixels.
-     * @param {number} charSize.height - The height of a character in pixels.
+     * @param {HTMLElement} mirror - The textarea mirror used to calculate caret coordinates.
      * @param {number} padding - The padding inside the text area in pixels.
-     * @param {number} cols - The number of columns (characters per line) for text wrapping calculations.
      */
-    constructor(textArea, overlay, charSize, padding, cols) {
+    constructor(textArea, overlay, mirror, padding) {
         this.textArea = textArea;
         this.overlay = overlay;
-        this.charSize = charSize;
+        this.mirror = mirror;
         this.padding = padding;
-        this.cols = cols;
 
         /** @type {Map<HTMLElement, number>} Maps each (active) cursor to their last activity timestamp (ms) */
         this.activeCursors = new Map();
-
-        // Time in milliseconds before a cursor is considered inactive (5 mins)
-        this.inactivityTimeoutMs = 5 * 30 * 1000;
-
-        // Frequency in milliseconds to check for inactive cursors
-        this.inactivityCheckFrequencyMs = this.inactivityTimeoutMs / 10;
 
         /** @type {string[]} List of colors assigned to cursors */
         this.colors = [
@@ -75,6 +71,7 @@ class RemoteCursorManager {
      * @param {number} offset - The number of characters added (positive) or removed (negative). Must be either -1 or +1!
      */
     synchronizeCursors(index, offset) {
+        return;
         const start = index;
         const end = this.textArea.value.length - 1;
         
@@ -130,12 +127,12 @@ class RemoteCursorManager {
         this.cleanupInterval = setInterval(() => {
             const now = Date.now();
             for (const [cursor, lastActivity] of this.activeCursors.entries()) {
-                if (now - lastActivity > this.inactivityTimeoutMs) {
+                if (now - lastActivity > RemoteCursorManager.#INACTIVITY_TIMEOUT_MS) {
                     console.info(`Removing inactive cursor for user: ${cursor.getAttribute("data-username")}`);
                     this.#deleteCursor(cursor);
                 }
             }
-        }, this.inactivityCheckFrequencyMs); // Check every minute
+        }, RemoteCursorManager.#INACTIVITY_CHECK_FREQUENCY_MS); // Check every minute
     }
 
     /**
@@ -146,30 +143,28 @@ class RemoteCursorManager {
      * @returns {{top: number, left: number}} The coordinates in pixels.
      */
     #indexToCoordinates(charIndex) {
-        const text = this.textArea.value;
-        let row = 0;
-        let col = 0;
+        // FIXME:
 
-        // Loop through text up to the specific index to simulate rendering
-        for (let i = 0; i < charIndex; i++) {
-            // If we hit a hard newline, reset col and increment row
-            if (text[i] === '\n') {
-                row++;
-                col = 0;
-                continue;
-            }
+        // Copy text up to the cursor position
+        // We replace the actual char at the index with a span to measure it
+        const text = this.textArea.value.substring(0, charIndex);
+        
+        // Set the text content of the mirror
+        this.mirror.textContent = text;
 
-            col++;
-            if (col >= this.cols - 1) {
-                row++;
-                col = 0;
-            }
-        }
+        // Append a span to mark the cursor position
+        const span = document.createElement('span');
+        span.textContent = '#'; // The character doesn't matter, we just need position
+        this.mirror.appendChild(span);
 
-        const top = (row * this.charSize.height) + this.padding;
-        const left = (col * this.charSize.width) + this.padding;
-
-        return { top, left };
+        // Read coordinates directly from the span
+        // Note: We subtract scrollTop if you want coordinates relative to the viewport, 
+        //  but since your cursors are in a scrolling Overlay that syncs with the textarea, 
+        //  absolute offsetTop is likely what you want.
+        return {
+            top: span.offsetTop,
+            left: span.offsetLeft
+        };
     }
 
     /**

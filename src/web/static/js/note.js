@@ -11,6 +11,7 @@ const USERNAME = fetchUsername();
 const CONTAINER = document.getElementById('main');
 const TEXT_AREA = document.getElementById('textarea');
 const OVERLAY = document.getElementById('overlay');
+const MIRROR = document.getElementById("mirror");
 const NOTE_NAME = document.getElementById('window-title');
 const LAST_UPDATE_TIMESTAMP = document.getElementById('last-update-timestamp');
 const LAST_UPDATE_USERNAME = document.getElementById('last-update-username');
@@ -43,9 +44,10 @@ CONTAINER.style.width = `${COLS * CHAR_SIZE.width + PADDING * 2}px`;
 CONTAINER.style.height = `${ROWS * CHAR_SIZE.height + PADDING * 2}px`;
 TEXT_AREA.style.padding = `${PADDING}px`;
 OVERLAY.style.padding = `${PADDING}px`;
+MIRROR.style.padding = `${PADDING}px`;
 
 const remoteCursorManager = new RemoteCursorManager(
-    TEXT_AREA, OVERLAY, CHAR_SIZE, PADDING, COLS
+    TEXT_AREA, OVERLAY, MIRROR, PADDING
 );
 
 // Scroll sync
@@ -154,12 +156,12 @@ console.info(`Loaded TEXT_AREA {
  */
 function processIncomingEditMessage(edit) 
 {
-    console.info("Received edit message: ", edit);
-    
     if (edit.username === USERNAME) {
         console.warn("Ignoring mirrored update...");
         return;
     }
+
+    console.info("Received edit message: ", edit);
 
     let index;
     switch (edit.action) 
@@ -256,7 +258,9 @@ const uuid = params.get('uuid');
 const name = params.get('name');
 loadNoteOrCreateIfNew(uuid, name);
 
-const server = new Server(uuid, processIncomingEditMessage, processIncomingSyncMessage);
+const hostname = window.location.hostname;
+const port = 8086;
+const server = new Server(hostname, port, uuid, processIncomingEditMessage, processIncomingSyncMessage);
 
 
 const deleteNoteButton = document.getElementById('menu-bar-delete');
@@ -288,6 +292,8 @@ renameNoteButton.className = 'menu-bar-enabled';
 
 // FIXME: c'è ancora qualche off-by-one nei cursori - provare la scrollbar
 // FIXME: scroll non funziona su windows?
+
+// FIXME: i think we can receive a move (or delete?) for a char that does not exist yet
 
 // FIXME: for debug - to remove
 document.getElementById("clippy").addEventListener("click", () => {
