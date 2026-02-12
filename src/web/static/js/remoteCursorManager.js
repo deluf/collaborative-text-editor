@@ -88,6 +88,16 @@ class RemoteCursorManager {
     }
 
     /**
+     * Removes all active remote cursors from the overlay and clears all activity data.
+     * Use this to reset the collaborative state or clean up when disconnecting.
+     */
+    deleteAll() {
+        for (const cursor of this.activeCursors) {
+            this.#deleteCursor(cursor);
+        }
+    }    
+
+    /**
      * Updates the stretcher cursor position to the end of the text.
      * This ensures the overlay height matches the textarea scroll height.
      */
@@ -128,7 +138,7 @@ class RemoteCursorManager {
             
             for (const username of usersToRemove) {
                 console.info(`Removing inactive cursor for user: ${username}`);
-                this.#deleteCursor(username);
+                this.#deleteCursorByUsername(username);
             }
         }, this.inactivityCheckFrequencyMs); // Check every minute
     }
@@ -212,12 +222,21 @@ class RemoteCursorManager {
     }
 
     /**
-     * Deletes the remote cursor and activity data for the specified user.
+     * Deletes the remote cursor for the specified user.
      * * @private
      * @param {string} username - The username of the cursor to remove.
      */
-    #deleteCursor(username) {
+    #deleteCursorByUsername(username) {
         const cursor = document.getElementById(`cursor-${username}`);
+        this.#deleteCursor(cursor);
+    }
+
+    /**
+     * Completely removes a remote cursor and all its data.
+     * * @private
+     * @param {HTMLElement} cursor - The cursor to remove.
+     */
+    #deleteCursor(cursor) {
         const index = this.activeCursors.indexOf(cursor);
         if (cursor) { 
             cursor.remove(); 

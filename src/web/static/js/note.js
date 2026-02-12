@@ -5,8 +5,7 @@ import { RemoteCursorManager } from "./remoteCursorManager.js";
 import { SimpleCRDT } from "./simpleCRDT.js";
 const CRDT = new SimpleCRDT();
 
-import { Server, Edit } from "./server.js";
-
+import { Server, Edit, Sync } from "./server.js";
 
 const USERNAME = fetchUsername();
 const CONTAINER = document.getElementById('main');
@@ -148,47 +147,69 @@ console.info(`Loaded TEXT_AREA {
     char_size: ${CHAR_SIZE.width} x ${CHAR_SIZE.height},
 }`);
 
+
 /**
- * 
+ * callback to process messages coming from the server (websocket)
  * @param {Edit} edit 
- * @returns 
  */
-function processIncomingRequest(edit) 
+function processIncomingEditMessage(edit) 
 {
+    console.info("Received edit message: ", edit);
+    
     if (edit.username === USERNAME) {
-        console.warn("Ignored mirrored update: ", edit);
+        console.warn("Ignoring mirrored update...");
         return;
     }
+
     let index;
     switch (edit.action) 
     {
         case 'insert':
             index = CRDT.insert(edit.id);
-            //console.info(`${username} inserted char '${character}' at index ${index} (after char '${TEXT_AREA.value[index - 1]}')`);
-            TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + edit.char + TEXT_AREA.value.slice(index);
-            // FIXME: TEXT_AREA.setRangeText(edit.char, index, index, 'end');
+            console.debug(`${edit.username} inserted char '${edit.char}' at index ${index} (after char '${TEXT_AREA.value[index - 1]}')`);
+            // TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + edit.char + TEXT_AREA.value.slice(index);
+            TEXT_AREA.setRangeText(edit.char, index, index, 'preserve');
             remoteCursorManager.synchronizeCursors(index, +1);
             remoteCursorManager.moveCursorByName(edit.username, index + 1);
             updateNoteStats(edit.username);
             break;
         case 'delete':
             index = CRDT.deleteFromId(edit.id);
-            //console.info(`${username} deleted char '${TEXT_AREA.value[index]}' at index ${index}`);
-            TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + TEXT_AREA.value.slice(index + 1);
+            console.debug(`${edit.username} deleted char '${TEXT_AREA.value[index]}' at index ${index}`);
+            // TEXT_AREA.value = TEXT_AREA.value.slice(0, index) + TEXT_AREA.value.slice(index + 1);
+            TEXT_AREA.setRangeText('', index, index + 1, 'preserve');
             remoteCursorManager.synchronizeCursors(index, -1);
             remoteCursorManager.moveCursorByName(edit.username, index);
             updateNoteStats(edit.username);
             break;
         case 'move':
             index = CRDT.getIndexFromId(edit.id);
-            //console.info(`${username} moved at index ${index}`);
+            console.debug(`${edit.username} moved at index ${index}`);
             remoteCursorManager.moveCursorByName(edit.username, index);
             break;
-            // FIXME: action 'sync', data = [{id, char}, {id, char}, ...]
+            // FIXME: il user tag è sotto alla menu bar
+            // FIXME: c'è ancora qualche off-by-one nei cursori - provare la scrollbar
+                // FIXME: bug strano del client dopo una delete ricopia tutto??
         default:
             console.warn(`Received unknown action '${edit.action}' from user '${edit.username}'`);
             return;
     }
+}
+
+/**
+ * 
+ * @param {Sync} sync 
+ */
+function processIncomingSyncMessage(sync) {
+    console.info("Received sync message: ", sync);
+    remoteCursorManager.deleteAll();
+    TEXT_AREA.value = "";
+    CRDT.clear();
+    for (const delta of sync.data) {
+        index = CRDT.insert(delta.id);
+        TEXT_AREA.setRangeText(delta.char, index, index, 'end');
+    }
+    updateNoteStats("< Server >");
 }
 
 
@@ -224,7 +245,7 @@ function loadNoteOrCreateIfNew(uuid, name) {
             name: name,
             owned: false
         });
-        importedNote.save();
+        importedNote.saveToLocalStorage();
         NOTE_NAME.innerText = name;
     }
 
@@ -238,7 +259,7 @@ const uuid = params.get('uuid');
 const name = params.get('name');
 loadNoteOrCreateIfNew(uuid, name);
 
-const server = new Server(uuid, processIncomingRequest);
+const server = new Server(uuid, processIncomingEditMessage, processIncomingSyncMessage);
 
 
 const deleteNoteButton = document.getElementById('menu-bar-delete');

@@ -26,7 +26,7 @@ document.getElementById('create-note').addEventListener('click', () =>
     if (name === null) return; // User cancelled prompt
     try {
         const note = new Note({ name: name });
-        note.save();
+        note.saveToLocalStorage();
         note.open();
     } 
     catch (error) {

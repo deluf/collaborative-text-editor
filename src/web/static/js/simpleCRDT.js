@@ -83,6 +83,13 @@ class SimpleCRDT {
     }
 
     /**
+     * Clears all fractional IDs from the internal map, resetting the state.
+     */
+    clear() {
+        this.ids = [];
+    }
+
+    /**
      * Finds the first index where `this.ids[index] >= id` using binary search.
      * * @private
      * @param {string} id - The ID to search for.

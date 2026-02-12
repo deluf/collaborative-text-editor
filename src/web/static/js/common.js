@@ -74,7 +74,7 @@ class Note {
     /**
      * Saves the current note instance to LocalStorage
      */
-    save() {
+    saveToLocalStorage() {
         const notes = Note.#getAllRaw();
         notes.push(this.#toJSON());
         localStorage.setItem(LOCAL_STORAGE_KEYS.NOTES, JSON.stringify(notes));
