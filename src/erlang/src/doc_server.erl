@@ -36,6 +36,7 @@ get_text(DocId) ->
 
 %%% GenServer Callbacks %%%
 init([DocId]) ->
+    %% Load initial state from Mnesia (or create new)
     InitialDoc = case mnesia:dirty_read(editor_docs, DocId) of
         [] -> 
             crdt_core:new();
@@ -55,23 +56,11 @@ handle_cast({join, Pid}, State) ->
 
 handle_cast({insert, Id, UserId, Char}, State) ->
     NewDoc = crdt_core:insert(State#state.doc, Id, Char),
-    
-    mnesia:dirty_write(#editor_docs{
-        doc_id = State#state.doc_id, 
-        content = NewDoc
-    }),
-    
     broadcast(State#state.clients, {insert, Id, UserId, Char}),
     {noreply, State#state{doc = NewDoc}};
 
 handle_cast({delete, Id, UserId}, State) ->
     NewDoc = crdt_core:delete(State#state.doc, Id),
-    
-    mnesia:dirty_write(#editor_docs{
-        doc_id = State#state.doc_id, 
-        content = NewDoc
-    }),
-    
     broadcast(State#state.clients, {delete, Id, UserId}),
     {noreply, State#state{doc = NewDoc}};
 
@@ -81,7 +70,20 @@ handle_cast({move, UserId, Pos}, State) ->
 
 handle_info({'DOWN', _Ref, process, Pid, _Reason}, State) ->
     NewClients = lists:delete(Pid, State#state.clients),
-    {noreply, State#state{clients = NewClients}};
+    
+    case NewClients of
+        [] ->
+            %% No clients left. Save state and stop the server.
+            mnesia:dirty_write(#editor_docs{
+                doc_id = State#state.doc_id, 
+                content = State#state.doc
+            }),
+            {stop, normal, State#state{clients = []}};
+        _ ->
+            %% Clients still connected, just update the list.
+            {noreply, State#state{clients = NewClients}}
+    end;
+
 handle_info(_Msg, State) ->
     {noreply, State}.
 
