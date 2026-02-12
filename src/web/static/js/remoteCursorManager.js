@@ -48,6 +48,9 @@ class RemoteCursorManager {
             '#FDFFB6',
             '#FFC6FF'
         ];
+
+        // Offset that randomizes color assignment to cursors
+        this.colorOffset = Math.floor(Math.random() * this.colors.length);
         
         // Create stretcher cursor for scrolling sync
         this.stretcher = this.#createStretcher();
@@ -213,7 +216,7 @@ class RemoteCursorManager {
         cursor.className = 'remote-cursor';
         cursor.setAttribute('data-username', username);
         cursor.setAttribute('data-index', '0');
-        cursor.style.backgroundColor = this.colors[this.activeCursors.length % this.colors.length];
+        cursor.style.backgroundColor = this.colors[this.activeCursors.length % this.colors.length + this.colorOffset];
         this.overlay.appendChild(cursor);
         this.activeCursors.push(cursor);
         this.#updateActivity(username);
