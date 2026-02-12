@@ -25,27 +25,25 @@ websocket_handle({text, Json}, State) ->
         case maps:get(<<"action">>, Map, undefined) of
             <<"insert">> ->
                 Char = maps:get(<<"char">>, Map),
-                Id  = maps:get(<<"id">>, Map),
+                Id   = maps:get(<<"id">>, Map),
                 User = maps:get(<<"username">>, Map),
-                doc_server:add_char(DocId, Id, User, Char);
+                doc_server:add_char(DocId, self(), Id, User, Char);
 
             <<"delete">> ->
-                Id  = maps:get(<<"id">>, Map),
+                Id   = maps:get(<<"id">>, Map),
                 User = maps:get(<<"username">>, Map),
-                doc_server:remove_char(DocId, Id, User);
+                doc_server:remove_char(DocId, self(), Id, User);
 
             <<"move">> ->
-                Id  = maps:get(<<"id">>, Map),
+                Id   = maps:get(<<"id">>, Map),
                 User = maps:get(<<"username">>, Map),
-                doc_server:move_cursor(DocId, User, Id);
+                doc_server:move_cursor(DocId, self(), User, Id);
 
             _ -> 
                 ok
         end
     catch
-        _:_ -> 
-            %% Ignore malformed JSON or missing keys
-            ok
+        _:_ -> ok
     end,
     {ok, State};
 
