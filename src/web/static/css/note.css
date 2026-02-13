@@ -5,7 +5,11 @@
 .menu-bar-enabled { color: black !important; }
 .menu-bar-enabled:hover { background-color: white; }
 
-#main { position: relative; }
+#main { 
+    position: relative; 
+    width: 800px;
+    height: 500px;
+}
 
 .editor-layer {
     position: absolute;
@@ -15,6 +19,7 @@
     height: 100%;
     margin: 0;
     border: 0;
+    padding: 10px;
     box-sizing: border-box;
     /* Font family is critical - it must be monospace */ 
     font-family: 'Courier New', monospace; 
@@ -44,7 +49,7 @@
     overflow: hidden;
 }
 
-#mirror {
+#ghost-textarea {
     visibility: hidden;
 }
 

@@ -1,20 +1,21 @@
-import { fetchUsername, LOCAL_STORAGE_KEYS, Note } from './common.js';
+"use strict";
 
+import { NoteItem } from './noteItem.js';
+import { Database } from './database.js';
+
+/* Handle the username */ 
 const usernameSpan = document.getElementById('username');
-usernameSpan.innerText = fetchUsername();
-
-// Event listener that saves manual changes to the username in the local storage
+usernameSpan.innerText = Database.getUsername();
 usernameSpan.addEventListener('click', () => {
-    const newUsername = prompt('Enter a new username:', '');
-    if (newUsername === null) return; // User cancelled prompt
-    localStorage.setItem(LOCAL_STORAGE_KEYS.USERNAME, newUsername);
+    const newUsername = prompt('Enter your new username:', '');
+    if (newUsername === null) { return; } // User cancelled prompt
     usernameSpan.innerText = newUsername;
+    Database.setUsername(newUsername);
 });
-
 
 /* Render existing notes */
 const notesContainer = document.getElementById('notes');
-Note.getAll().forEach(note => {
+Database.getNotes().forEach(note => {
     notesContainer.appendChild(note.render());
 });
 
@@ -23,10 +24,10 @@ document.getElementById('create-note').addEventListener('click', () =>
 {
     // Popup for the name
     const name = prompt('Enter the name of the new note:', '');
-    if (name === null) return; // User cancelled prompt
+    if (name === null) { return; } // User cancelled prompt
     try {
-        const note = new Note({ name: name });
-        note.saveToLocalStorage();
+        const note = new NoteItem({ name: name });
+        Database.saveNote(note);
         note.open();
     } 
     catch (error) {

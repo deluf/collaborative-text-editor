@@ -42,7 +42,9 @@ connect_to_nodes() ->
     lists:foreach(fun(Node) -> 
         io:format("Attempting to join cluster node: ~p... ", [Node]),
         case net_adm:ping(Node) of
-            pong -> io:format("Success.~n");
+            pong -> 
+                io:format("Success.~n"),
+                mnesia:change_config(extra_db_nodes, [Node]);
             pang -> io:format("Failed (pang).~n")
         end
     end, Nodes).
