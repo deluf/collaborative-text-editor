@@ -13,7 +13,7 @@ const USERNAME = Database.getUsername();
 
 const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
 const hostname = window.location.hostname;
-const port = 8087;
+const port = 8086;
 const openNote = loadNoteOrCreateIfNew();
 
 const SOCKET = new CollaborativeSocketClient(
@@ -177,3 +177,4 @@ function processIncomingSyncMessage(syncMessage) {
 }
 
 
+// FIXME: cursors on sync
