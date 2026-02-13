@@ -4,8 +4,15 @@
 -export([start/2, stop/1]).
 
 start(_StartType, _StartArgs) ->
-    %% 1. Initialize Mnesia
+    %% 1. Connect to other nodes (Clustering)
+    %%    We must do this BEFORE Mnesia starts so we can see remote tables.
+    connect_to_nodes(),
+
+    %% 2. Initialize Mnesia (Schema & Tables)
     init_mnesia(),
+
+    %% 3. Get Port from config or default to 8086
+    Port = application:get_env(collaborative_editor, http_port, 8086),
 
     Dispatch = cowboy_router:compile([
         {'_', [
@@ -13,8 +20,10 @@ start(_StartType, _StartArgs) ->
         ]}
     ]),
 
+    io:format("Starting server on port ~p...~n", [Port]),
+
     {ok, _} = cowboy:start_clear(http_listener,
-        [{port, 8086}],
+        [{port, Port}],
         #{env => #{dispatch => Dispatch}}
     ),
 
@@ -23,7 +32,20 @@ start(_StartType, _StartArgs) ->
 stop(_State) ->
     ok.
 
-%% collaborative_editor_app.erl
+%% ===================================================================
+%% Internal Functions
+%% ===================================================================
+
+connect_to_nodes() ->
+    %% Get list of nodes to join from env, e.g., ['node1@localhost', 'node2@localhost']
+    Nodes = application:get_env(collaborative_editor, join_nodes, []),
+    lists:foreach(fun(Node) -> 
+        io:format("Attempting to join cluster node: ~p... ", [Node]),
+        case net_adm:ping(Node) of
+            pong -> io:format("Success.~n");
+            pang -> io:format("Failed (pang).~n")
+        end
+    end, Nodes).
 
 init_mnesia() ->
     %% 1. Ensure the Schema itself is stored on disk.
@@ -41,8 +63,7 @@ init_mnesia() ->
         {atomic, ok} -> 
             ok; %% Created fresh on this node
         {aborted, {already_exists, editor_docs}} -> 
-            %% Table exists (e.g., on another node). 
-            %% Request a local disk replica so we persist it here too.
+            io:format("Table 'editor_docs' exists remotely. Creating local replica...~n"),
             case mnesia:add_table_copy(editor_docs, node(), disc_copies) of
                 {atomic, ok} -> ok;
                 {aborted, {already_exists, editor_docs, _}} -> ok; %% We already have a copy
@@ -52,5 +73,5 @@ init_mnesia() ->
             error(Error)
     end,
     
-    %% 3. Wait for tables (infinity is safer for clustering startup)
+    %% 3. Wait for tables
     mnesia:wait_for_tables([editor_docs], infinity).
