@@ -29,7 +29,7 @@ init_mnesia() ->
     %% 1. Ensure the Schema itself is stored on disk.
     case mnesia:change_table_copy_type(schema, node(), disc_copies) of
         {atomic, ok} -> ok;
-        {aborted, {already_exists, schema, _Node, _Type}} -> ok;
+        {aborted, {already_exists, schema, _, _}} -> ok;
         {aborted, Reason} -> error(Reason)
     end,
 
@@ -45,7 +45,7 @@ init_mnesia() ->
             %% Request a local disk replica so we persist it here too.
             case mnesia:add_table_copy(editor_docs, node(), disc_copies) of
                 {atomic, ok} -> ok;
-                {aborted, {already_exists, editor_docs, _Node}} -> ok; %% We already have a copy
+                {aborted, {already_exists, editor_docs, _}} -> ok; %% We already have a copy
                 {aborted, Error} -> error(Error)
             end;
         {aborted, Error} -> 

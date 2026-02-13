@@ -17,7 +17,38 @@
 
 -record(editor_docs, {doc_id, content}).
 
-%%% GenServer Callbacks %%%
+%%%===================================================================
+%%% Client API
+%%%===================================================================
+
+%% @doc Starts the server and registers it globally with the tuple {doc, DocId}
+start_link(DocId) ->
+    gen_server:start_link({global, {doc, DocId}}, ?MODULE, [DocId], []).
+
+%% @doc Join a specific document (subscribes Pid to updates)
+join(DocId, Pid) ->
+    gen_server:cast({global, {doc, DocId}}, {join, Pid}).
+
+%% @doc Synchronous call to get current text state
+get_text(DocId) ->
+    gen_server:call({global, {doc, DocId}}, get_text).
+
+%% @doc Insert a character at a specific CRDT ID
+add_char(DocId, SenderPid, Id, User, Char) ->
+    gen_server:cast({global, {doc, DocId}}, {insert, SenderPid, Id, User, Char}).
+
+%% @doc Remove a character by CRDT ID
+remove_char(DocId, SenderPid, Id, User) ->
+    gen_server:cast({global, {doc, DocId}}, {delete, SenderPid, Id, User}).
+
+%% @doc Move a user's cursor
+move_cursor(DocId, SenderPid, User, Pos) ->
+    gen_server:cast({global, {doc, DocId}}, {move, SenderPid, User, Pos}).
+
+%%%===================================================================
+%%% GenServer Callbacks
+%%%===================================================================
+
 init([DocId]) ->
     InitialDoc = case mnesia:dirty_read(editor_docs, DocId) of
         [] -> crdt_core:new();
