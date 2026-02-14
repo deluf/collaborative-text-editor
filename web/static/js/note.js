@@ -164,6 +164,8 @@ function processIncomingSyncMessage(syncMessage) {
     CURSOR_MANAGER.clear();
     FRACTIONAL_ID_MANAGER.clear();
     NOTE_VIEW.GUI.textArea.value = "";
+    
+    // Populate document
     for (const delta of syncMessage.data) {
         let index = FRACTIONAL_ID_MANAGER.insert(delta.id);
         if (index === -1) { 
@@ -172,9 +174,14 @@ function processIncomingSyncMessage(syncMessage) {
         }
         NOTE_VIEW.GUI.textArea.setRangeText(delta.char, index, index, 'end');
     }
+
+    // Populate cursors
+    for (const cursor of syncMessage.cursors) {
+        if (cursor.username == USERNAME) { continue; }
+        const index = FRACTIONAL_ID_MANAGER.getIndexFromId(cursor.id);
+        CURSOR_MANAGER.moveCursorByName(cursor.username, index);
+    }
     NOTE_VIEW.updateStats("<SERVER>");
     CURSOR_MANAGER.overlayHeightSync();
 }
 
-
-// FIXME: cursors on sync

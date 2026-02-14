@@ -206,10 +206,22 @@ const syncMessageSchema = {
                 required: ["id", "char"],
                 additionalProperties: false
             }
+        },
+        cursors: {
+            type: "array",
+            items: {
+                type: "object",
+                properties: {
+                    id: { "type": "string" },
+                    username: { "type": "string" }
+                },
+                required: ["id", "username"],
+                additionalProperties: false
+            }
         }
     },
-    required: ["action", "data"],
-    additionalProperties: true // FIXME:
+    required: ["action", "data", "cursors"],
+    additionalProperties: false
 };
 
 /**
@@ -220,9 +232,11 @@ class SyncMessage {
      * @param {Object} parameters
      * @param {'sync'} parameters.action - 
      * @param {Array<{id: string, char: string}>} parameters.data 
+     * @param {Array<{id: string, username: string}>} parameters.cursors
      */
-    constructor({ action = 'sync', data }) {
+    constructor({ action = 'sync', data, cursors }) {
         this.action = action;
         this.data = data;
+        this.cursors = cursors;
     }
 }
