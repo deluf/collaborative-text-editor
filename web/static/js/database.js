@@ -15,8 +15,8 @@ class Database {
      * @type {Object<string, string>}
      */
     static #KEYS = {
-        USERNAME: 'username',
-        NOTES: 'notes'
+        USERNAME: "username",
+        NOTES: "notes"
     };
 
     /**
@@ -89,7 +89,7 @@ class Database {
      * @throws {Error} If a note with the provided UUID does not exist
      */
     static renameNote(uuid, newName) {
-        if (!newName || newName.trim() === '') {
+        if (!newName || newName.trim() === "") {
             throw new Error("A note's name cannot be empty");
         }
         

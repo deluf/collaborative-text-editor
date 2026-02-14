@@ -22,7 +22,7 @@
     padding: 10px;
     box-sizing: border-box;
     /* Font family is critical - it must be monospace */ 
-    font-family: 'Courier New', monospace; 
+    font-family: "Courier New", monospace; 
     font-size: 12pt;
     line-height: var(--line-height);
     /* break words exactly at the textarea right border, not before */

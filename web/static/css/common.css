@@ -83,7 +83,7 @@ body {
     gap: 5px;
 }
 
-/* Create the 3D 'sunken' effect */
+/* Create the 3D sunken effect */
 #footer > div {
     padding: 1px 3px;
     border: 1.5px solid;

@@ -32,16 +32,16 @@ class RemoteCursorManager {
 
         /** @type {string[]} List of colors assigned to cursors */
         this.colors = [
-            '#FFADAD', 
-            '#CAFFBF',
-            '#A0C4FF',
-            '#F4E1D2', 
-            '#D4F0F0',
-            '#BDB2FF',
-            '#FFD6A5',
-            '#9BF6FF',
-            '#E1E575',
-            '#FFC6FF'
+            "#FFADAD", 
+            "#CAFFBF",
+            "#A0C4FF",
+            "#F4E1D2", 
+            "#D4F0F0",
+            "#BDB2FF",
+            "#FFD6A5",
+            "#9BF6FF",
+            "#E1E575",
+            "#FFC6FF"
         ];
 
         // Offset that randomizes color assignment to cursors
@@ -55,7 +55,7 @@ class RemoteCursorManager {
          * 
          * The second problem is simply fixed by adding a scroll event listener:
          */
-        this.textArea.addEventListener('scroll', () => {
+        this.textArea.addEventListener("scroll", () => {
             this.overlay.scrollTop = this.textArea.scrollTop;
         });
         /**
@@ -115,9 +115,9 @@ class RemoteCursorManager {
      * @returns {HTMLElement} The created stretcher element
      */
     #createStretcherCursor() {
-        const stretcher = document.createElement('div');
-        stretcher.className = 'remote-cursor';
-        stretcher.style.visibility = 'hidden';
+        const stretcher = document.createElement("div");
+        stretcher.className = "remote-cursor";
+        stretcher.style.visibility = "hidden";
         this.overlay.appendChild(stretcher);
         return stretcher;
     }
@@ -169,11 +169,11 @@ class RemoteCursorManager {
      * @returns {HTMLElement} The newly created cursor element
      */
     #createCursor(username) {
-        const cursor = document.createElement('div');
+        const cursor = document.createElement("div");
         cursor.id = `cursor-${username}`;
-        cursor.className = 'remote-cursor';
-        cursor.setAttribute('data-username', username);
-        cursor.setAttribute('data-index', '0');
+        cursor.className = "remote-cursor";
+        cursor.setAttribute("data-username", username);
+        cursor.setAttribute("data-index", "0");
         cursor.style.backgroundColor = this.colors[
             (this.activeCursors.size + this.colorOffset) % this.colors.length
         ];
@@ -201,7 +201,7 @@ class RemoteCursorManager {
      * @param {number} index - The target character index
      */
     #moveCursor(cursor, index) {
-        cursor.setAttribute('data-index', index);
+        cursor.setAttribute("data-index", index);
         const { top, left } = this.#indexToCoordinates(index);
         cursor.style.top = `${top}px`;
         cursor.style.left = `${left}px`;
@@ -221,8 +221,8 @@ class RemoteCursorManager {
         // (there is no need to remove the created <span>s manually)
 
         // Append a span to the ghost textarea - this marks the cursor position
-        const span = document.createElement('span');
-        span.textContent = '#'; // The character doesn't matter, we just need the position
+        const span = document.createElement("span");
+        span.textContent = "#"; // The character doesn't matter, we just need the position
         this.ghostTextArea.appendChild(span);
 
         // Read the coordinates directly from the span

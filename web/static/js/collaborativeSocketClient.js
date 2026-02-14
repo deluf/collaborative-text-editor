@@ -79,19 +79,19 @@ class CollaborativeSocketClient {
     #connect() {
         // Clean up existing socket listeners if they exist
         if (this.socket) {
-            this.socket.removeEventListener('open', this.#onOpen);
-            this.socket.removeEventListener('message', this.#onReceive);
-            this.socket.removeEventListener('close', this.#onClose);
+            this.socket.removeEventListener("open", this.#onOpen);
+            this.socket.removeEventListener("message", this.#onReceive);
+            this.socket.removeEventListener("close", this.#onClose);
             this.socket.close();
         }
         this.socket = new WebSocket(this.url);
-        this.socket.addEventListener('open', this.#onOpen);
-        this.socket.addEventListener('message', this.#onReceive);
-        this.socket.addEventListener('close', this.#onClose);
+        this.socket.addEventListener("open", this.#onOpen);
+        this.socket.addEventListener("message", this.#onReceive);
+        this.socket.addEventListener("close", this.#onClose);
     }
 
     /**
-     * Event handler for the WebSocket 'open' event
+     * Event handler for the WebSocket "open" event
      * Resets reconnection delays and attempts to flush any queued edits
      * @private
      */
@@ -119,7 +119,7 @@ class CollaborativeSocketClient {
     }
 
     /**
-     * Event handler for the WebSocket 'close' event
+     * Event handler for the WebSocket "close" event
      * Initiates the reconnection process using an exponential backoff strategy
      * @private
      */
@@ -137,7 +137,7 @@ class CollaborativeSocketClient {
     }
 
     /**
-     * Event handler for the WebSocket 'message' event.
+     * Event handler for the WebSocket "message" event.
      * Parses the incoming JSON, validates it against known schemas, 
      *  and triggers the appropriate callback
      * * @param {MessageEvent} event - The WebSocket message event

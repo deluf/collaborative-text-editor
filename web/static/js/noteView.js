@@ -17,13 +17,13 @@ class NoteView {
      */
     constructor(openNote, onLocalInsert, onLocalDelete, onLocalMove) {
         this.GUI = {
-            textArea: document.getElementById('textarea'),
-            overlay: document.getElementById('overlay'),
-            ghostTextArea: document.getElementById('ghost-textarea'),
-            windowTitle: document.getElementById('window-title'),
-            lastUpdateTimestamp: document.getElementById('last-update-timestamp'),
-            lastUpdateUsername:  document.getElementById('last-update-username'),
-            connectionStatus: document.getElementById('connection-status')
+            textArea: document.getElementById("textarea"),
+            overlay: document.getElementById("overlay"),
+            ghostTextArea: document.getElementById("ghost-textarea"),
+            windowTitle: document.getElementById("window-title"),
+            lastUpdateTimestamp: document.getElementById("last-update-timestamp"),
+            lastUpdateUsername:  document.getElementById("last-update-username"),
+            connectionStatus: document.getElementById("connection-status")
         }
 
         this.openNote = openNote;
@@ -67,7 +67,7 @@ class NoteView {
      */
     #setupTextArea() {
         // Disables everything but single-char insert/delete
-        this.GUI.textArea.addEventListener('beforeinput', (event) => {
+        this.GUI.textArea.addEventListener("beforeinput", (event) => {
             const { inputType, data } = event;
             
             // Strictly block every operation with multiple chars selected
@@ -77,35 +77,35 @@ class NoteView {
             }
 
             // Allow single-char deletions (backspace only)
-            if (inputType === 'deleteContentBackward') { return; }
+            if (inputType === "deleteContentBackward") { return; }
 
             // Allow single-char additions
             if (data && data.length === 1) { return; }
 
             // Allow newlines
-            if (inputType === 'insertLineBreak' || inputType === 'insertParagraph') { return; }
+            if (inputType === "insertLineBreak" || inputType === "insertParagraph") { return; }
 
             // Block everything else (e.g., pasting, dragging, multi-char autocomplete, ...)
             event.preventDefault();
         });
 
-        // Extra safety: Disable 'drop' to prevent text dragging
-        this.GUI.textArea.addEventListener('drop', (event) => event.preventDefault());
+        // Extra safety: Disable "drop" to prevent text dragging
+        this.GUI.textArea.addEventListener("drop", (event) => event.preventDefault());
 
         let IS_MODIFYING_TEXT = false;
 
-        this.GUI.textArea.addEventListener('input', (event) => {
+        this.GUI.textArea.addEventListener("input", (event) => {
             IS_MODIFYING_TEXT = true;
 
             const { inputType } = event;
             const { selectionStart } = event.target;
             
             let index = selectionStart;
-            if (inputType.startsWith('insert')) { this.onLocalInsert(index - 1); }
-            else if (inputType.startsWith('delete')) { this.onLocalDelete(index); }
+            if (inputType.startsWith("insert")) { this.onLocalInsert(index - 1); }
+            else if (inputType.startsWith("delete")) { this.onLocalDelete(index); }
         });
 
-        this.GUI.textArea.addEventListener('selectionchange', () => {
+        this.GUI.textArea.addEventListener("selectionchange", () => {
             const start = this.GUI.textArea.selectionStart;
             const end = this.GUI.textArea.selectionEnd;
 
@@ -126,15 +126,15 @@ class NoteView {
      */
     #setupShareButton() {
         if (!this.openNote.owned) { return; }
-        const shareNoteButton = document.getElementById('menu-bar-share');
-        shareNoteButton.addEventListener('click', () => {
+        const shareNoteButton = document.getElementById("menu-bar-share");
+        shareNoteButton.addEventListener("click", () => {
             const shareURL = this.openNote.getShareURL();
             const shareURLprompt = `Share this URL: \n${shareURL}`;
             navigator.clipboard.writeText(shareURL)
-                .then(() => alert(shareURLprompt + '\n(The URL was copied to your clipboard)'))
+                .then(() => alert(shareURLprompt + "\n(The URL was copied to your clipboard)"))
                 .catch(() => alert(shareURLprompt));
         });
-        shareNoteButton.className = 'menu-bar-enabled';
+        shareNoteButton.className = "menu-bar-enabled";
     }
 
     /**
@@ -143,12 +143,12 @@ class NoteView {
      * @private
      */
     #setupDeleteNoteButton() {
-        const deleteNoteButton = document.getElementById('menu-bar-delete');
-        deleteNoteButton.addEventListener('click', () => {
+        const deleteNoteButton = document.getElementById("menu-bar-delete");
+        deleteNoteButton.addEventListener("click", () => {
             Database.deleteNote(this.openNote.uuid);
-            window.location.href = '/';
+            window.location.href = "/";
         });
-        deleteNoteButton.className = 'menu-bar-enabled';    
+        deleteNoteButton.className = "menu-bar-enabled";    
     }
 
     /**
@@ -156,10 +156,10 @@ class NoteView {
      * @private
      */
     #setupRenameNoteButton() {
-        const renameNoteButton = document.getElementById('menu-bar-rename');
-        renameNoteButton.addEventListener('click', () => {
+        const renameNoteButton = document.getElementById("menu-bar-rename");
+        renameNoteButton.addEventListener("click", () => {
             // Popup for the name
-            let name = prompt('Enter the new name for this note:', '');
+            let name = prompt("Enter the new name for this note:", "");
             if (name === null) return; // User cancelled prompt
             try {
                 name = Database.renameNote(this.openNote.uuid, name);
@@ -169,7 +169,7 @@ class NoteView {
                 alert(error.message); // e.g. "A note's name cannot be empty"
             }
         });
-        renameNoteButton.className = 'menu-bar-enabled';    
+        renameNoteButton.className = "menu-bar-enabled";    
     }
 
 }

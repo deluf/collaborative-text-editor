@@ -1,8 +1,8 @@
 "use strict";
 
 import { NoteView } from "./noteView.js";
-import { NoteItem } from './noteItem.js';
-import { Database } from './database.js';
+import { NoteItem } from "./noteItem.js";
+import { Database } from "./database.js";
 import { RemoteCursorManager } from "./remoteCursorManager.js";
 import { FractionalIdManager } from "./fractionalIdManager.js";
 import { CollaborativeSocketClient, ACTION, EditMessage, SyncMessage } from "./collaborativeSocketClient.js";
@@ -15,7 +15,7 @@ import { CollaborativeSocketClient, ACTION, EditMessage, SyncMessage } from "./c
 
 const USERNAME = Database.getUsername();
 
-const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+const protocol = window.location.protocol === "https:" ? "wss" : "ws";
 const hostname = window.location.hostname;
 const port = 8086;
 const openNote = loadNoteOrCreateIfNew();
@@ -46,8 +46,8 @@ const CURSOR_MANAGER = new RemoteCursorManager(
 function loadNoteOrCreateIfNew() {
     // .../note?uuid=...&name=...
     const params = new URLSearchParams(window.location.search);
-    const uuid = params.get('uuid');
-    const name = params.get('name');
+    const uuid = params.get("uuid");
+    const name = params.get("name");
 
     const notes = Database.getNotes();
     let note = notes.find(note => note.uuid === uuid);
@@ -65,7 +65,7 @@ function loadNoteOrCreateIfNew() {
         }
 
         // Otherwise, abort
-        else { window.location.href = '/'; }
+        else { window.location.href = "/"; }
     }
 
     return note;
@@ -88,7 +88,7 @@ function onLocalInsert(index) {
     });
     index = FRACTIONAL_ID_MANAGER.insert(newId);
     if (index === -1) { 
-        console.error(`Tried to insert duplicate ID '${newId}' - Ignoring the edit...`);
+        console.error(`Tried to insert duplicate ID "${newId}" - Ignoring the edit...`);
         return;
     }    
     SOCKET.sendEdit(edit);  
@@ -145,7 +145,7 @@ function processIncomingEditMessage(edit)
         case ACTION.DELETE: onRemoteDelete(edit); break;
         case ACTION.MOVE: onRemoteMove(edit); break;
         default:
-            console.warn(`Received unknown action '${edit.action}' from user '${edit.username}'`);
+            console.warn(`Received unknown action "${edit.action}" from user "${edit.username}"`);
             return;
     }
 }
@@ -158,10 +158,10 @@ function processIncomingEditMessage(edit)
 function onRemoteInsert(edit) {
     const index = FRACTIONAL_ID_MANAGER.insert(edit.id);
     if (index === -1) { 
-        console.error(`Tried to insert duplicate ID '${edit.id}' - ignoring the edit...`);
+        console.error(`Tried to insert duplicate ID "${edit.id}" - ignoring the edit...`);
         return;
     }
-    NOTE_VIEW.GUI.textArea.setRangeText(edit.char, index, index, 'preserve');
+    NOTE_VIEW.GUI.textArea.setRangeText(edit.char, index, index, "preserve");
     CURSOR_MANAGER.moveCursorByName(edit.username, index + 1);
     CURSOR_MANAGER.overlayHeightSync();
     NOTE_VIEW.updateStats(edit.username);
@@ -175,10 +175,10 @@ function onRemoteInsert(edit) {
 function onRemoteDelete(edit) {
     const index = FRACTIONAL_ID_MANAGER.deleteFromId(edit.id);
     if (index === -1) { 
-        console.error(`Tried to delete non-existent ID '${edit.id}' - ignoring the edit...`);
+        console.error(`Tried to delete non-existent ID "${edit.id}" - ignoring the edit...`);
         return;
     }
-    NOTE_VIEW.GUI.textArea.setRangeText('', index, index + 1, 'preserve');
+    NOTE_VIEW.GUI.textArea.setRangeText("", index, index + 1, "preserve");
     CURSOR_MANAGER.moveCursorByName(edit.username, index);
     CURSOR_MANAGER.overlayHeightSync();
     NOTE_VIEW.updateStats(edit.username);
@@ -209,12 +209,12 @@ function processIncomingSyncMessage(syncMessage) {
     for (const delta of syncMessage.data) {
         let index = FRACTIONAL_ID_MANAGER.insert(delta.id);
         if (index === -1) { 
-            console.error(`Tried to insert duplicate ID '${delta.id}' - ignoring the edit...`);
+            console.error(`Tried to insert duplicate ID "${delta.id}" - ignoring the edit...`);
             continue;
         }
         document.splice(index, 0, delta.char);
     }
-    NOTE_VIEW.GUI.textArea.value = document.join('');
+    NOTE_VIEW.GUI.textArea.value = document.join("");
 
     // Populate cursors
     for (const cursor of syncMessage.cursors) {

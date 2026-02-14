@@ -17,7 +17,7 @@ class NoteItem {
      * @throws {Error} Will throw an error if the name is missing or empty
      */
     constructor({ uuid, name, owned = true }) {
-        if (!name || name.trim() === '') {
+        if (!name || name.trim() === "") {
             throw new Error("A note's name cannot be empty");
         }
         this.uuid = uuid || self.crypto.randomUUID();
@@ -31,13 +31,13 @@ class NoteItem {
      * @returns {HTMLAnchorElement} The complete dashboard element for this note.
      */
     render() {    
-        const link = document.createElement('a');
+        const link = document.createElement("a");
         link.href = `/note?uuid=${this.uuid}`;
         
-        const icon = document.createElement('div');
-        icon.className = this.owned ? 'owned-note-icon' : 'shared-note-icon';
+        const icon = document.createElement("div");
+        icon.className = this.owned ? "owned-note-icon" : "shared-note-icon";
 
-        const name = document.createElement('div');
+        const name = document.createElement("div");
         name.textContent = this.name;
 
         link.appendChild(icon);
