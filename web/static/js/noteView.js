@@ -45,6 +45,8 @@ class NoteView {
      * @param {string} username - The username of the person who just modified the note
      */
     updateStats(username) {
+        // Ignore the (local) stats update if the connection is down
+        if (this.GUI.connectionStatus.dataset.status === "offline") { return; }
         this.GUI.lastUpdateTimestamp.innerText = new Date().toLocaleString();
         this.GUI.lastUpdateUsername.innerText = username;    
     }
