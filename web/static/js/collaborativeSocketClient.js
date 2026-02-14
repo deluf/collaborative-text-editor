@@ -29,11 +29,17 @@ class CollaborativeSocketClient {
      *  a valid edit message is received
      * @param {function(SyncMessage): void} onSyncMessageReceived - Callback function invoked when
      *  a valid sync message is received
+     * @param {function(boolean): void} onConnectionStatusChange - Callback invoked when the
+     *  connection state changes (true = online, false = offline)
      */
-    constructor(protocol, hostname, port, noteUUID, onEditMessageReceived, onSyncMessageReceived) {
+    constructor(
+        protocol, hostname, port, noteUUID,
+        onEditMessageReceived, onSyncMessageReceived, onConnectionStatusChange
+    ) {
         this.url = `${protocol}://${hostname}:${port}/${noteUUID}`;
         this.onEditMessageReceived = onEditMessageReceived;
         this.onSyncMessageReceived = onSyncMessageReceived;
+        this.onConnectionStatusChange = onConnectionStatusChange;
 
         this.reconnectDelay = CollaborativeSocketClient.#BASE_RECONNECT_DELAY_MS;
         this.reconnectTimeoutId = null;
@@ -59,7 +65,7 @@ class CollaborativeSocketClient {
             const jsonString = JSON.stringify(edit);
             this.socket.send(jsonString);
         } 
-        else {
+        else if (edit.action != ACTION.MOVE) {
             this.editsQueue.push(edit);
             console.warn(`Unable to send edit: socket ${this.url} is closed.` + 
                 `There are ${this.editsQueue.length} edits in queue`);
@@ -91,6 +97,7 @@ class CollaborativeSocketClient {
      */
     #onOpen = () => {
         console.info(`Connected to ${this.url}`);
+        this.onConnectionStatusChange(true);
         
         // Clear the reconnect timer
         if (this.reconnectTimeoutId) {
@@ -118,6 +125,8 @@ class CollaborativeSocketClient {
      */
     #onClose = () => {
         console.warn(`Socket closed unexpectedly - reconnecting in ${this.reconnectDelay} ms ...`);
+        this.onConnectionStatusChange(false);
+
         this.reconnectTimeoutId = setTimeout(() => {
             this.reconnectDelay = Math.min(
                 this.reconnectDelay * CollaborativeSocketClient.#BACKOFF_FACTOR,

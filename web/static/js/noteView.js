@@ -23,6 +23,7 @@ class NoteView {
             windowTitle: document.getElementById('window-title'),
             lastUpdateTimestamp: document.getElementById('last-update-timestamp'),
             lastUpdateUsername:  document.getElementById('last-update-username'),
+            connectionStatus: document.getElementById('connection-status')
         }
 
         this.openNote = openNote;
@@ -46,6 +47,16 @@ class NoteView {
     updateStats(username) {
         this.GUI.lastUpdateTimestamp.innerText = new Date().toLocaleString();
         this.GUI.lastUpdateUsername.innerText = username;    
+    }
+
+    /**
+     * Updates the connection status UI
+     * @param {boolean} isOnline - True if connected, false otherwise
+     */
+    setConnectionStatus = (isOnline) => {
+        const statusText = isOnline ? "online" : "offline";
+        this.GUI.connectionStatus.innerText = statusText;
+        this.GUI.connectionStatus.dataset.status = statusText;
     }
 
     /**

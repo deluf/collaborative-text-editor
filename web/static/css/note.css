@@ -104,3 +104,26 @@
     z-index: 3;
     box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1); 
 }
+
+#connection-status::after {
+    content: "";
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%; 
+    margin-left: 5px;
+    vertical-align: middle;
+    background-size: 2px 2px;
+}
+
+#connection-status[data-status="online"]::after {
+    background-color: #28c82d;
+    background-image: radial-gradient(#25a729 1px, #28c82d 0px);
+    border: 0.5px solid rgb(0, 103, 2);
+}
+
+#connection-status[data-status="offline"]::after {
+    background-color: #c82828;
+    background-image: radial-gradient(#a72525 1px, #c82828 0px);
+    border: 0.5px solid rgb(103, 0, 0);
+}

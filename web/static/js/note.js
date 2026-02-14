@@ -20,13 +20,13 @@ const hostname = window.location.hostname;
 const port = 8086;
 const openNote = loadNoteOrCreateIfNew();
 
-const SOCKET = new CollaborativeSocketClient(
-    protocol, hostname, port, openNote.uuid,
-    processIncomingEditMessage, processIncomingSyncMessage
-);
-
 const NOTE_VIEW = new NoteView(
     openNote, onLocalInsert, onLocalDelete, onLocalMove
+);
+
+const SOCKET = new CollaborativeSocketClient(
+    protocol, hostname, port, openNote.uuid,
+    processIncomingEditMessage, processIncomingSyncMessage, NOTE_VIEW.setConnectionStatus
 );
 
 const FRACTIONAL_ID_MANAGER = new FractionalIdManager();
