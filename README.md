@@ -13,6 +13,26 @@ This application allows multiple users to edit the same document simultaneously 
 * Erlang/OTP
 * Rebar3
 
+```
+apt update
+apt install nginx
+systemctl start nginx
+systemctl enable nginx
+rm /var/www/html/*
+
+wget https://s3.amazonaws.com/rebar3/rebar3
+chmod +x rebar3
+mv rebar3 /usr/local/bin/
+
+git clone https://github.com/deluf/collaborative-text-editor
+
+mv collaborative-text-editor/web/static/ /var/www/html/
+mv collaborative-text-editor/web/templates/* /var/www/html
+
+cd collaborative-text-editor/erlang/
+rebar3 shell
+```
+
 ## Running Locally
 
 Start the server in an interactive shell:

@@ -3,10 +3,17 @@ import { Database } from "./database.js";
 
 export { NoteView };
 
+/**
+ * Handles the graphical user interface and event listeners for the open note
+ */
 class NoteView {
 
     /** 
-     * @param {NoteItem} openNote - ...
+     * Creates an instance of NoteView
+     * @param {NoteItem} openNote - The note object currently being viewed and edited
+     * @param {function(number): void} onLocalInsert - Callback triggered when a character is inserted locally
+     * @param {function(number): void} onLocalDelete - Callback triggered when a character is deleted locally
+     * @param {function(number): void} onLocalMove - Callback triggered when the cursor position changes
      */
     constructor(openNote, onLocalInsert, onLocalDelete, onLocalMove) {
         this.GUI = {
@@ -23,6 +30,7 @@ class NoteView {
         this.onLocalDelete = onLocalDelete;
         this.onLocalMove = onLocalMove;
 
+        // Setup the window title
         this.GUI.windowTitle.innerText = this.openNote.name;
 
         this.#setupTextArea();
@@ -31,48 +39,21 @@ class NoteView {
         this.#setupRenameNoteButton();
     }
 
+    /**
+     * Updates the status bar with the latest available information
+     * @param {string} username - The username of the person who just modified the note
+     */
     updateStats(username) {
         this.GUI.lastUpdateTimestamp.innerText = new Date().toLocaleString();
         this.GUI.lastUpdateUsername.innerText = username;    
     }
 
-    #setupShareButton() {
-        if (!this.openNote.owned) { return; }
-        const shareNoteButton = document.getElementById('menu-bar-share');
-        shareNoteButton.addEventListener('click', () => {
-            const shareURL = this.openNote.getShareURL();
-            navigator.clipboard.writeText(shareURL);
-            alert(`Share this URL (copied to your clipboard):\n${shareURL}`); 
-        });
-        shareNoteButton.className = 'menu-bar-enabled';
-    }
-
-    #setupDeleteNoteButton() {
-        const deleteNoteButton = document.getElementById('menu-bar-delete');
-        deleteNoteButton.addEventListener('click', () => {
-            Database.deleteNote(this.openNote.uuid);
-            window.location.href = '/';
-        });
-        deleteNoteButton.className = 'menu-bar-enabled';    
-    }
-
-    #setupRenameNoteButton() {
-        const renameNoteButton = document.getElementById('menu-bar-rename');
-        renameNoteButton.addEventListener('click', () => {
-            // Popup for the name
-            let name = prompt('Enter the new name for this note:', '');
-            if (name === null) return; // User cancelled prompt
-            try {
-                name = Database.renameNote(this.openNote.uuid, name);
-                this.GUI.windowTitle.innerText = name;
-            }
-            catch (error) {
-                alert(error.message); // e.g. "A note's name cannot be empty"
-            }
-        });
-        renameNoteButton.className = 'menu-bar-enabled';    
-    }
-
+    /**
+     * Sets up the event listeners for the text area. 
+     * Restricts inputs to single-character insertions and deletions to support CRDT logic,
+     *  and binds text modification and cursor movement to the respective local callbacks
+     * @private
+     */
     #setupTextArea() {
         // Disables everything but single-char insert/delete
         this.GUI.textArea.addEventListener('beforeinput', (event) => {
@@ -84,7 +65,7 @@ class NoteView {
                 return;
             }
 
-            // Allow single-char deletions (backspace/delete)
+            // Allow single-char deletions (backspace only)
             if (inputType === 'deleteContentBackward') { return; }
 
             // Allow single-char additions
@@ -93,7 +74,7 @@ class NoteView {
             // Allow newlines
             if (inputType === 'insertLineBreak' || inputType === 'insertParagraph') { return; }
 
-            // Block everything else (pasting, dragging, multi-char autocomplete)
+            // Block everything else (e.g., pasting, dragging, multi-char autocomplete, ...)
             event.preventDefault();
         });
 
@@ -109,29 +90,75 @@ class NoteView {
             const { selectionStart } = event.target;
             
             let index = selectionStart;
-            if (inputType.startsWith('insert')) {
-                index--;
-                this.onLocalInsert(index);
-            }
-        
-            if (inputType.startsWith('delete')) {
-                this.onLocalDelete(index);
-            }
+            if (inputType.startsWith('insert')) { this.onLocalInsert(index - 1); }
+            else if (inputType.startsWith('delete')) { this.onLocalDelete(index); }
         });
 
         this.GUI.textArea.addEventListener('selectionchange', () => {
             const start = this.GUI.textArea.selectionStart;
             const end = this.GUI.textArea.selectionEnd;
+
             // Ignore multi-char selections
             if (end !== start) { return; }
+            
             // Ignore the selection change if it originated from a text edit
-            if (IS_MODIFYING_TEXT) 
-            {
-                IS_MODIFYING_TEXT = false;
-                return;
-            }
+            if (IS_MODIFYING_TEXT) { IS_MODIFYING_TEXT = false; return; }
+
             this.onLocalMove(start);
         });
+    }
+
+    /**
+     * If the current user owns the note, enables a menu bar button that copies the note's share
+     *  URL to the clipboard
+     * @private
+     */
+    #setupShareButton() {
+        if (!this.openNote.owned) { return; }
+        const shareNoteButton = document.getElementById('menu-bar-share');
+        shareNoteButton.addEventListener('click', () => {
+            const shareURL = this.openNote.getShareURL();
+            const shareURLprompt = `Share this URL: \n${shareURL}`;
+            navigator.clipboard.writeText(shareURL)
+                .then(() => alert(shareURLprompt + '\n(The URL was copied to your clipboard)'))
+                .catch(() => alert(shareURLprompt));
+        });
+        shareNoteButton.className = 'menu-bar-enabled';
+    }
+
+    /**
+     * Enables a menu bar button that allows the user to delete the current note from the database 
+     *  and redirects to the home page
+     * @private
+     */
+    #setupDeleteNoteButton() {
+        const deleteNoteButton = document.getElementById('menu-bar-delete');
+        deleteNoteButton.addEventListener('click', () => {
+            Database.deleteNote(this.openNote.uuid);
+            window.location.href = '/';
+        });
+        deleteNoteButton.className = 'menu-bar-enabled';    
+    }
+
+    /**
+     * Enables a menu bar button that prompts the user for a new name to assing to the current note
+     * @private
+     */
+    #setupRenameNoteButton() {
+        const renameNoteButton = document.getElementById('menu-bar-rename');
+        renameNoteButton.addEventListener('click', () => {
+            // Popup for the name
+            let name = prompt('Enter the new name for this note:', '');
+            if (name === null) return; // User cancelled prompt
+            try {
+                name = Database.renameNote(this.openNote.uuid, name);
+                this.GUI.windowTitle.innerText = name;
+            }
+            catch (error) {
+                alert(error.message); // e.g. "A note's name cannot be empty"
+            }
+        });
+        renameNoteButton.className = 'menu-bar-enabled';    
     }
 
 }
