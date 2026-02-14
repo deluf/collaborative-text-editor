@@ -5,7 +5,7 @@ import { NoteItem } from './noteItem.js';
 import { Database } from './database.js';
 import { RemoteCursorManager } from "./remoteCursorManager.js";
 import { FractionalIdManager } from "./fractionalIdManager.js";
-import { CollaborativeSocketClient, EditMessage, SyncMessage } from "./collaborativeSocketClient.js";
+import { CollaborativeSocketClient, ACTION, EditMessage, SyncMessage } from "./collaborativeSocketClient.js";
 
 /*  --- Global variables --- */
 
@@ -22,8 +22,7 @@ const SOCKET = new CollaborativeSocketClient(
 );
 
 const NOTE_VIEW = new NoteView(
-    USERNAME, openNote,
-    onLocalInsert, onLocalDelete, onLocalMove
+    openNote, onLocalInsert, onLocalDelete, onLocalMove
 );
 
 const FRACTIONAL_ID_MANAGER = new FractionalIdManager();
@@ -33,8 +32,6 @@ const CURSOR_MANAGER = new RemoteCursorManager(
     NOTE_VIEW.GUI.overlay,
     NOTE_VIEW.GUI.ghostTextArea
 );
-
-
 
 function loadNoteOrCreateIfNew() {
     // .../note?uuid=...&name=...
@@ -64,18 +61,13 @@ function loadNoteOrCreateIfNew() {
     return note;
 }
 
-
-
-
-
-
 /*  --- Callback functions --- */
 
 function onLocalInsert(index) {
     const newId = FRACTIONAL_ID_MANAGER.getNewId(index);
     const edit = new EditMessage({
         username: USERNAME,
-        action: "insert", // FIXME: maybe an enum?
+        action: ACTION.INSERT,
         id: newId,
         char: NOTE_VIEW.GUI.textArea.value[index]
     });
@@ -86,23 +78,25 @@ function onLocalInsert(index) {
     }    
     SOCKET.sendEdit(edit);  
     CURSOR_MANAGER.overlayHeightSync();
+    NOTE_VIEW.updateStats(USERNAME);
 }
 
 function onLocalDelete(index) {
     const edit = new EditMessage({
         username: USERNAME,
-        action: "delete",
+        action: ACTION.DELETE,
         id: FRACTIONAL_ID_MANAGER.getIdFromIndex(index)
     });
     FRACTIONAL_ID_MANAGER.deleteFromIndex(index);
     SOCKET.sendEdit(edit);
     CURSOR_MANAGER.overlayHeightSync();
+    NOTE_VIEW.updateStats(USERNAME);
 }
 
 function onLocalMove(index) {
     const edit = new EditMessage({
         username: USERNAME,
-        action: "move",
+        action: ACTION.MOVE,
         id: FRACTIONAL_ID_MANAGER.getIdFromIndex(index)
     });
     SOCKET.sendEdit(edit);    
@@ -117,9 +111,9 @@ function processIncomingEditMessage(edit)
 
     console.info("Received edit message: ", edit);
     switch (edit.action) {
-        case 'insert': onRemoteInsert(edit); break;
-        case 'delete': onRemoteDelete(edit); break;
-        case 'move': onRemoveMove(edit); break;
+        case ACTION.INSERT: onRemoteInsert(edit); break;
+        case ACTION.DELETE: onRemoteDelete(edit); break;
+        case ACTION.MOVE: onRemoveMove(edit); break;
         default:
             console.warn(`Received unknown action '${edit.action}' from user '${edit.username}'`);
             return;

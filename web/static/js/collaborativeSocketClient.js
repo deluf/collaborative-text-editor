@@ -2,7 +2,7 @@
 
 import Ajv from "https://esm.sh/ajv";
 
-export { CollaborativeSocketClient, EditMessage, SyncMessage };
+export { CollaborativeSocketClient, ACTION, EditMessage, SyncMessage };
 
 /**
  * Manages the WebSocket connection to a server for real-time collaboration on a specific note.
@@ -146,6 +146,22 @@ class CollaborativeSocketClient {
 }
 
 /**
+ * Enumeration of supported action types for document operations
+ * @readonly
+ * @enum {string}
+ */
+const ACTION = {
+    /** Indicates a new character is being added to the document */
+    INSERT: "insert",
+    /** Indicates an existing character is being removed from the document */
+    DELETE: "delete",
+    /** Indicates a user's cursor has changed position */
+    MOVE: "move",
+    /** Indicates a full document state synchronization payload */
+    SYNC: "sync"
+};
+
+/**
  * JSON Schema for validating Edit messages
  */
 const editMessageSchema = {
@@ -153,7 +169,7 @@ const editMessageSchema = {
     properties: {
         action: { 
             type: "string",
-            enum: ["insert", "delete", "move"] 
+            enum: [ACTION.INSERT, ACTION.DELETE, ACTION.MOVE] 
         },
         username: { "type": "string" },
         id: { "type": "string" },
@@ -161,8 +177,8 @@ const editMessageSchema = {
     },
     required: ["action", "username", "id"],
     additionalProperties: false,
-    // Enforce the presence of "char" field if the action is an "insert"
-    if: { properties: { action: { const: "insert" } } },
+    // Enforce the presence of "char" field if the action is an INSERT
+    if: { properties: { action: { const: ACTION.INSERT } } },
     then: { required: ["char"] }
 };
 
@@ -173,7 +189,7 @@ class EditMessage {
     /**
      * @param {Object} parameters
      * @param {string} parameters.username - The user performing the edit
-     * @param {string} parameters.action - One of: 'insert', 'delete', 'move'
+     * @param {string} parameters.action - One of: ACTION.INSERT, ACTION.DELETE, ACTION.MOVE
      * @param {string} parameters.id - The fractional identifier of the edited char
      * @param {string|null} [parameters.char=null] - The ASCII character being inserted (if any)
      */
@@ -193,7 +209,7 @@ const syncMessageSchema = {
     properties: {
         action: { 
             type: "string",
-            enum: ["sync"] 
+            enum: [ACTION.SYNC] 
         },
         data: {
             type: "array",
@@ -230,11 +246,11 @@ const syncMessageSchema = {
 class SyncMessage {
     /**
      * @param {Object} parameters
-     * @param {'sync'} parameters.action - 
-     * @param {Array<{id: string, char: string}>} parameters.data 
-     * @param {Array<{id: string, username: string}>} parameters.cursors
+     * @param {string} [parameters.action=ACTION.SYNC] - The action identifier (must be ACTION.SYNC)
+     * @param {Array<{id: string, char: string}>} parameters.data - The complete text content of the document
+     * @param {Array<{id: string, username: string}>} parameters.cursors - The current active cursors
      */
-    constructor({ action = 'sync', data, cursors }) {
+    constructor({ action = ACTION.SYNC, data, cursors }) {
         this.action = action;
         this.data = data;
         this.cursors = cursors;

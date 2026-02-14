@@ -8,7 +8,7 @@ class NoteView {
     /** 
      * @param {NoteItem} openNote - ...
      */
-    constructor(username, openNote, onLocalInsert, onLocalDelete, onLocalMove) {
+    constructor(openNote, onLocalInsert, onLocalDelete, onLocalMove) {
         this.GUI = {
             textArea: document.getElementById('textarea'),
             overlay: document.getElementById('overlay'),
@@ -18,7 +18,6 @@ class NoteView {
             lastUpdateUsername:  document.getElementById('last-update-username'),
         }
 
-        this.username = username;
         this.openNote = openNote;
         this.onLocalInsert = onLocalInsert;
         this.onLocalDelete = onLocalDelete;
@@ -32,7 +31,7 @@ class NoteView {
         this.#setupRenameNoteButton();
     }
 
-    updateStats(username=this.username) {
+    updateStats(username) {
         this.GUI.lastUpdateTimestamp.innerText = new Date().toLocaleString();
         this.GUI.lastUpdateUsername.innerText = username;    
     }
@@ -110,7 +109,6 @@ class NoteView {
             const { selectionStart } = event.target;
             
             let index = selectionStart;
-            let edit;
             if (inputType.startsWith('insert')) {
                 index--;
                 this.onLocalInsert(index);
@@ -119,8 +117,6 @@ class NoteView {
             if (inputType.startsWith('delete')) {
                 this.onLocalDelete(index);
             }
-
-            this.updateStats();
         });
 
         this.GUI.textArea.addEventListener('selectionchange', () => {
