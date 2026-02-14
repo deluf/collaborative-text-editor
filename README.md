@@ -1,20 +1,17 @@
-# collaborative_editor
 
-A real-time collaborative text editor backend built with Erlang/OTP, Cowboy, and CRDTs.
+# Installation
 
-This application allows multiple users to edit the same document simultaneously while maintaining eventual consistency across distributed nodes.
+VMs:
+- 10.2.1.23 (RIP)
+- 10.2.1.24 (already set-up)
+- 10.2.1.41
+- 10.2.1.42
 
-## Features
+First:
 
-???
-
-## Prerequisites
-
-* Erlang/OTP
-* Rebar3
-
-```
+```bash
 apt update
+
 apt install nginx
 systemctl start nginx
 systemctl enable nginx
@@ -30,87 +27,16 @@ mv collaborative-text-editor/web/static/ /var/www/html/
 mv collaborative-text-editor/web/templates/* /var/www/html
 
 cd collaborative-text-editor/erlang/
+```
+
+Then:
+
+- Single-node setup:
+```bash
 rebar3 shell
 ```
 
-## Running Locally
-
-Start the server in an interactive shell:
-
-    $ rebar3 shell
-
-The server will listen on `http://localhost:8080`.
-
-## API & Usage
-
-### WebSocket Endpoint
-Connect to a document using the following URL structure:
-
-    ws://localhost:8080/ws/:doc_id
-
-Example: `ws://localhost:8080/ws/meeting_notes`
-
-### Protocol (JSON)
-The server communicates using simple JSON messages.
-
-#### 1. Insert Character
-input:
-```json
-{
-  "type": "insert",
-  "char": "A",
-  "pos": [1],
-  "user": "User123"
-}
+- Distributed setup:
+```bash
+rebar3 shell --name node{N}@127.0.0.1 --setcookie mycookie --config config/node{N}.config
 ```
-
-#### 2. Delete Character
-
-input:
-
-```json
-{
-  "type": "delete",
-  "pos": [1],
-  "user": "User123"
-}
-```
-
-#### 3. Initial Sync (Server -> Client)
-
-output:
-
-```json
-{
-  "type": "sync",
-  "data": [
-    {"pos": [1], "char": "H", "user": "UserA"},
-    {"pos": [2], "char": "i", "user": "UserB"}
-  ]
-}
-```
-
-## Distributed Clustering
-
-```sh
-rebar3 shell --name node1@127.0.0.1 --setcookie mysecret
-rebar3 shell --name node2@127.0.0.1 --setcookie mysecret
-```
-
-connect:
-```sh
-net_adm:ping('node2@127.0.0.1').
-```
-
----
-
-## Using config
-
-```sh
-rebar3 shell --name node1@127.0.0.1 --setcookie mycookie --config config/sys.config
-```
-
-
-
-
-
