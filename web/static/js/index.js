@@ -15,9 +15,11 @@ usernameSpan.addEventListener('click', () => {
 
 /* Render existing notes */
 const notesContainer = document.getElementById('notes');
+const notesFragment = document.createDocumentFragment(); // PERF: use an in-memory container
 Database.getNotes().forEach(note => {
-    notesContainer.appendChild(note.render());
+    notesFragment.appendChild(note.render());
 });
+notesContainer.appendChild(notesFragment);
 
 /* Handler for creating a new note */
 document.getElementById('create-note').addEventListener('click', () => 
