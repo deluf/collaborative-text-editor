@@ -139,7 +139,7 @@ function processIncomingEditMessage(edit)
         return;
     }
 
-    console.info("Received edit message: ", edit);
+    console.debug("Received edit message: ", edit);
     switch (edit.action) {
         case ACTION.INSERT: onRemoteInsert(edit); break;
         case ACTION.DELETE: onRemoteDelete(edit); break;
@@ -199,7 +199,7 @@ function onRemoteMove(edit) {
  * @param {SyncMessage} syncMessage - The complete state sync message from the server
  */
 function processIncomingSyncMessage(syncMessage) {
-    console.info("Received sync message: ", syncMessage);
+    console.debug("Received sync message: ", syncMessage);
     CURSOR_MANAGER.clear();
     FRACTIONAL_ID_MANAGER.clear();
     NOTE_VIEW.GUI.textArea.value = "";

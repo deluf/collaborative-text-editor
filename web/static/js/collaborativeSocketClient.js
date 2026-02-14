@@ -61,7 +61,7 @@ class CollaborativeSocketClient {
      */
     sendEdit(edit) {
         if (this.socket.readyState === WebSocket.OPEN) {
-            console.info("Sending: ", edit);
+            console.debug("Sending: ", edit);
             const jsonString = JSON.stringify(edit);
             this.socket.send(jsonString);
         } 
