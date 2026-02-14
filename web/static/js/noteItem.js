@@ -20,9 +20,27 @@ class NoteItem {
         if (!name || name.trim() === "") {
             throw new Error("A note's name cannot be empty");
         }
-        this.uuid = uuid || self.crypto.randomUUID();
+        this.uuid = uuid || this.#generateSafeUUID();
         this.name = name.trim();
         this.owned = owned;
+    }
+
+    /**
+     * Generates a UUIDv4 safely, falling back if crypto.randomUUID is unavailable
+     * @private
+     */
+    #generateSafeUUID() {
+        if (typeof self.crypto !== 'undefined' && self.crypto.randomUUID) {
+            return self.crypto.randomUUID();
+        }
+        
+        // Fallback for insecure contexts (file:// or http://)
+        console.warn("crypto.randomUUID unavailable - using a fallback UUID generator");
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
     }
 
     /**

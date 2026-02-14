@@ -15,7 +15,12 @@ apt update
 apt install nginx
 systemctl start nginx
 systemctl enable nginx
-rm /var/www/html/*
+rm -rf /var/www/html/*
+
+# Write this in /etc/nginx/sites-available/default under the other location rule
+location = /note {
+    try_files /note.html =404;
+}
 
 wget https://s3.amazonaws.com/rebar3/rebar3
 chmod +x rebar3
