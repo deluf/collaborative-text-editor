@@ -79,6 +79,13 @@ websocket_info({move, User, Id}, State) ->
     },
     {reply, {text, jsx:encode(Resp)}, State};
 
+websocket_info({remove_cursor, User}, State) ->
+    Resp = #{
+        action => <<"disconnected">>,
+        username => User
+    },
+    {reply, {text, jsx:encode(Resp)}, State};
+
 websocket_info({sync_state, Doc, Cursors}, State) ->
     DocJson = [ #{id => P, char => C} || {P, C} <- lists:sort(Doc) ],
     CursorJson = [ #{username => U, id => P} || {U, P} <- Cursors ],
