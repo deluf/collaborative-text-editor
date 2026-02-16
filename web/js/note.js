@@ -17,7 +17,7 @@ const USERNAME = Database.getUsername();
 
 const protocol = window.location.protocol === "https:" ? "wss" : "ws";
 const hostname = "10.2.1.24" // Load balancer
-const port = 8086;
+const port = 8080;
 const openNote = loadNoteOrCreateIfNew();
 
 const NOTE_VIEW = new NoteView(

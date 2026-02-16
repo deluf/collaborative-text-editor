@@ -30,7 +30,7 @@ systemctl enable nginx
 rm -rf /var/www/html/*
 
 cd --
-mv collaborative-text-editor/web/ /var/www/html/
+mv collaborative-text-editor/web/* /var/www/html/
 
 # Write this in /etc/nginx/sites-available/default
 http {
@@ -73,10 +73,10 @@ http {
     }
 
     # ---------------------------------------------------------
-    # 3. WebSocket Load Balancer (Proxy on Port 8086)
+    # 3. WebSocket Load Balancer (Proxy on Port 8080)
     # ---------------------------------------------------------
     server {
-        listen 8086;
+        listen 8080;
         server_name _;
 
         location / {
@@ -98,6 +98,10 @@ http {
         }
     }
 }
+##########################################
+
+nginx -t
+systemctl reload nginx
 ```
 
 
@@ -106,6 +110,7 @@ http {
 TODO:
 rename mycookie to something more sensato (tipo collaborative-text-editor)
 vedere se un erlang crasha cosa fa nginx
+cosa succede se un erlang va giu (si riconnettono dopo?)
 
 Maximum number of active users per document, with extra users having to wait in queue ?
 List of currently active users ?
