@@ -145,7 +145,7 @@ class FractionalIdManager {
 
         while (low < high) {
             const mid = Math.floor((low + high) / 2);
-            if (this.ids[mid] < id) {
+            if (this.ids[mid] < id) { // Native JS string comparison
                 low = mid + 1;
             } else {
                 high = mid;

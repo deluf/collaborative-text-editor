@@ -1,3 +1,5 @@
+:root { --line-height: 20px; }
+
 #window-icon {
     background-image: url("/static/media/notepad.png");
 }
