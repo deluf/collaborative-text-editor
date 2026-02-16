@@ -1,11 +1,11 @@
 #window-icon {
-    background-image: url("/static/media/folder.png");
+    background-image: url("/media/folder.png");
 }
 
 #main {
     width: 800px;
     height: 500px;
-    background-image: url("/static/media/explorer.png");
+    background-image: url("/media/explorer.png");
     background-size: cover;        
     background-repeat: no-repeat;
     background-position: center;
@@ -45,9 +45,9 @@
     background-size: contain; 
 }
 
-.create-note-icon { background-image: url("/static/media/create.png"); }
-.owned-note-icon { background-image: url("/static/media/owned.png"); }
-.shared-note-icon { background-image: url("/static/media/shared.png"); }
+.create-note-icon { background-image: url("/media/create.png"); }
+.owned-note-icon { background-image: url("/media/owned.png"); }
+.shared-note-icon { background-image: url("/media/shared.png"); }
 
 #username {
     cursor: pointer;

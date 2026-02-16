@@ -7,7 +7,7 @@ body {
     align-items: center;
     margin: 0;
     height: 100vh;
-    background-image: url("/static/media/bliss.jpg");
+    background-image: url("/media/bliss.jpg");
     background-size: cover;        
     background-repeat: no-repeat;
     background-position: center;
@@ -49,16 +49,16 @@ body {
 }
 
 #minimize-icon {
-    background-image: url("/static/media/minimize.png");
+    background-image: url("/media/minimize.png");
     opacity: 0.6; 
 }
 
 #maximize-icon {
-    background-image: url("/static/media/maximize.png");
+    background-image: url("/media/maximize.png");
     opacity: 0.6; 
 }
 
-#close-icon { background-image: url("/static/media/close.png"); }
+#close-icon { background-image: url("/media/close.png"); }
 #close-icon:hover {
     cursor: pointer;
     opacity: 0.9;

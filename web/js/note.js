@@ -16,7 +16,7 @@ import { CollaborativeSocketClient, ACTION, EditMessage, SyncMessage } from "./c
 const USERNAME = Database.getUsername();
 
 const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-const hostname = window.location.hostname;
+const hostname = "10.2.1.24" // Load balancer
 const port = 8086;
 const openNote = loadNoteOrCreateIfNew();
 

@@ -1,7 +1,7 @@
 :root { --line-height: 20px; }
 
 #window-icon {
-    background-image: url("/static/media/notepad.png");
+    background-image: url("/media/notepad.png");
 }
 
 .menu-bar-enabled { color: black !important; }
@@ -81,7 +81,7 @@
 }
 
 #clippy {
-    background-image: url("/static/media/clippy.png");
+    background-image: url("/media/clippy.png");
     width: 106px;
     height: 128px;
     position: absolute;
