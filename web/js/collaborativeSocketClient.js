@@ -160,35 +160,58 @@ class CollaborativeSocketClient {
  * @enum {string}
  */
 const ACTION = {
-    /** Indicates a new character is being added to the document */
-    INSERT: "insert",
-    /** Indicates an existing character is being removed from the document */
-    DELETE: "delete",
-    /** Indicates a user's cursor has changed position */
-    MOVE: "move",
-    /** Indicates a full document state synchronization payload */
-    SYNC: "sync"
+    /** A new character is being added to the document */
+    INSERT: "INSERT",
+    /** An existing character is being removed from the document */
+    DELETE: "DELETE",
+    /** A user's cursor has changed position */
+    MOVE: "MOVE",
+    /** A user disconnected */
+    DISCONNECT: "DISCONNECT",
+    /** A full document state synchronization payload */
+    SYNC: "SYNC"
 };
 
 /**
  * JSON Schema for validating Edit messages
  */
+const baseEditProperties = {
+    action: {
+        type: "string",
+        enum: [
+            ACTION.INSERT,
+            ACTION.DELETE,
+            ACTION.MOVE,
+            ACTION.DISCONNECT
+        ]
+    },
+    username: { type: "string" },
+    id: { type: "string" },
+    char: { type: "string", minLength: 1, maxLength: 1 }
+};
+
 const editMessageSchema = {
     type: "object",
-    properties: {
-        action: { 
-            type: "string",
-            enum: [ACTION.INSERT, ACTION.DELETE, ACTION.MOVE] 
-        },
-        username: { "type": "string" },
-        id: { "type": "string" },
-        char: { "type": "string", "minLength": 1, "maxLength": 1 }
-    },
-    required: ["action", "username", "id"],
+    properties: baseEditProperties,
     additionalProperties: false,
-    // Enforce the presence of "char" field if the action is an INSERT
-    if: { properties: { action: { const: ACTION.INSERT } } },
-    then: { required: ["char"] }
+    oneOf: [
+        { // INSERT
+            properties: { action: { const: ACTION.INSERT } },
+            required: ["action", "username", "id", "char"]
+        },
+        { // DELETE
+            properties: { action: { const: ACTION.DELETE } },
+            required: ["action", "username", "id"]
+        },
+        { // MOVE
+            properties: { action: { const: ACTION.MOVE } },
+            required: ["action", "username", "id"]
+        },
+        { // DISCONNECT
+            properties: { action: { const: ACTION.DISCONNECT } },
+            required: ["action", "username"]
+        }
+    ]
 };
 
 /**
@@ -198,7 +221,7 @@ class EditMessage {
     /**
      * @param {Object} parameters
      * @param {string} parameters.username - The user performing the edit
-     * @param {string} parameters.action - One of: ACTION.INSERT, ACTION.DELETE, ACTION.MOVE
+     * @param {string} parameters.action - One of: ACTION .INSERT, .DELETE, .MOVE, .DISCONNECT
      * @param {string} parameters.id - The fractional identifier of the edited char
      * @param {string|null} [parameters.char=null] - The ASCII character being inserted (if any)
      */

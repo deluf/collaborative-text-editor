@@ -8,6 +8,9 @@ export { NoteView };
  */
 class NoteView {
 
+    // The maximum number of rendered characters of the "last updater" username
+    static #LAST_UPDATER_MAX_LENGTH = 16;
+
     /** 
      * Creates an instance of NoteView
      * @param {NoteItem} openNote - The note object currently being viewed and edited
@@ -48,6 +51,9 @@ class NoteView {
         // Ignore the (local) stats update if the connection is down
         if (this.GUI.connectionStatus.dataset.status === "offline") { return; }
         this.GUI.lastUpdateTimestamp.innerText = new Date().toLocaleString();
+        if (username.length > NoteView.#LAST_UPDATER_MAX_LENGTH) {
+            username = username.substring(0, NoteView.#LAST_UPDATER_MAX_LENGTH) + "…";
+        }
         this.GUI.lastUpdateUsername.innerText = username;    
     }
 
@@ -132,9 +138,13 @@ class NoteView {
         shareNoteButton.addEventListener("click", () => {
             const shareURL = this.openNote.getShareURL();
             const shareURLprompt = `Share this URL: \n${shareURL}`;
-            navigator.clipboard.writeText(shareURL)
-                .then(() => alert(shareURLprompt + "\n(The URL was copied to your clipboard)"))
-                .catch(() => alert(shareURLprompt));
+            // Check if we are in a Secure Context with the Clipboard API available
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                navigator.clipboard.writeText(shareURL)
+                    .then(() => alert(shareURLprompt + "\n(The URL was copied to your clipboard)"))
+                    .catch(() => alert(shareURLprompt));
+            } 
+            else { alert(shareURLprompt); } // Fallback
         });
         shareNoteButton.className = "menu-bar-enabled";
     }

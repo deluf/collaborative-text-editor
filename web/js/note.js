@@ -144,6 +144,7 @@ function processIncomingEditMessage(edit)
         case ACTION.INSERT: onRemoteInsert(edit); break;
         case ACTION.DELETE: onRemoteDelete(edit); break;
         case ACTION.MOVE: onRemoteMove(edit); break;
+        case ACTION.DISCONNECT: onRemoteDisconnect(edit); break;
         default:
             console.warn(`Received unknown action "${edit.action}" from user "${edit.username}"`);
             return;
@@ -191,6 +192,14 @@ function onRemoteDelete(edit) {
 function onRemoteMove(edit) {
     const index = FRACTIONAL_ID_MANAGER.getIndexFromId(edit.id);
     CURSOR_MANAGER.moveCursorByName(edit.username, index);
+}
+
+/**
+ * Processes an incoming remote cursor disconnection
+ * @param {EditMessage} edit - The disconnect edit message payload
+ */
+function onRemoteDisconnect(edit) {
+    CURSOR_MANAGER.deleteCursorByName(edit.username);
 }
 
 /**

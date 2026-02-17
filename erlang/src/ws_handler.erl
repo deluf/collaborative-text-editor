@@ -9,6 +9,7 @@ init(Req, _Opts) ->
 
 websocket_init(State) ->
     DocId = maps:get(doc_id, State),
+    io:format("Joined for document: ~p~n", [DocId]), % FIXME: Debug only - remove later
     doc_registry:get_server(DocId),
     doc_server:join(DocId, self()),
     {ok, State}.
@@ -23,18 +24,18 @@ websocket_handle({text, Json}, State) ->
         Map = jsx:decode(Json, [return_maps]),
 
         case maps:get(<<"action">>, Map, undefined) of
-            <<"insert">> ->
+            <<"INSERT">> ->
                 Char = maps:get(<<"char">>, Map),
                 Id   = maps:get(<<"id">>, Map),
                 User = maps:get(<<"username">>, Map),
                 doc_server:add_char(DocId, self(), Id, User, Char);
 
-            <<"delete">> ->
+            <<"DELETE">> ->
                 Id   = maps:get(<<"id">>, Map),
                 User = maps:get(<<"username">>, Map),
                 doc_server:remove_char(DocId, self(), Id, User);
 
-            <<"move">> ->
+            <<"MOVE">> ->
                 Id   = maps:get(<<"id">>, Map),
                 User = maps:get(<<"username">>, Map),
                 doc_server:move_cursor(DocId, self(), User, Id);
@@ -56,7 +57,7 @@ websocket_handle(_Data, State) ->
 
 websocket_info({insert, Id, User, Char}, State) ->
     Resp = #{
-        action => <<"insert">>,
+        action => <<"INSERT">>,
         id  => Id, 
         username => User, 
         char => Char
@@ -65,7 +66,7 @@ websocket_info({insert, Id, User, Char}, State) ->
 
 websocket_info({delete, Id, User}, State) ->
     Resp = #{
-        action => <<"delete">>, 
+        action => <<"DELETE">>, 
         id  => Id, 
         username => User
     },
@@ -73,7 +74,7 @@ websocket_info({delete, Id, User}, State) ->
 
 websocket_info({move, User, Id}, State) ->
     Resp = #{
-        action => <<"move">>,
+        action => <<"MOVE">>,
         username => User,
         id  => Id
     },
@@ -81,7 +82,7 @@ websocket_info({move, User, Id}, State) ->
 
 websocket_info({remove_cursor, User}, State) ->
     Resp = #{
-        action => <<"disconnected">>,
+        action => <<"DISCONNECT">>,
         username => User
     },
     {reply, {text, jsx:encode(Resp)}, State};
@@ -90,7 +91,7 @@ websocket_info({sync_state, Doc, Cursors}, State) ->
     DocJson = [ #{id => P, char => C} || {P, C} <- lists:sort(Doc) ],
     CursorJson = [ #{username => U, id => P} || {U, P} <- Cursors ],
     Resp = #{
-        action => <<"sync">>, 
+        action => <<"SYNC">>, 
         data => DocJson,
         cursors => CursorJson
     },

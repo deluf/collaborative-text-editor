@@ -30,10 +30,10 @@ class NoteItem {
      * @private
      */
     #generateSafeUUID() {
-        if (typeof self.crypto !== 'undefined' && self.crypto.randomUUID) {
+        // Check if we are in a Secure Context with the Crypto API available
+        if (self.crypto && typeof self.crypto.randomUUID === 'function') {
             return self.crypto.randomUUID();
         }
-        
         // Fallback for insecure contexts (file:// or http://)
         console.warn("crypto.randomUUID unavailable - using a fallback UUID generator");
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {

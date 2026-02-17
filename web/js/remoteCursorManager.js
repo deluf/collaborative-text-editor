@@ -8,17 +8,11 @@ export { RemoteCursorManager };
  */
 class RemoteCursorManager {
 
-    /** @private Time in milliseconds before a cursor is considered inactive (5 mins) */
-    static #INACTIVITY_TIMEOUT_MS = 5 * 30 * 1000;
-
-    /** @private Frequency in milliseconds to check for inactive cursors */
-    static #INACTIVITY_CHECK_FREQUENCY_MS = RemoteCursorManager.#INACTIVITY_TIMEOUT_MS / 10;
-
     /**
      * Creates an instance of RemoteCursorManager
      * * @param {HTMLTextAreaElement} textArea - The text area element where editing occurs
      * @param {HTMLElement} overlay - The overlay container where cursor elements are appended
-     * @param {HTMLElement} ghostTextArea - The textarea used to calculate cursor coordinates
+     * @param {HTMLElement} ghostTextArea - The div used to calculate cursor coordinates
      */
     constructor(textArea, overlay, ghostTextArea) {
         this.textArea = textArea;
@@ -26,9 +20,8 @@ class RemoteCursorManager {
         this.ghostTextArea = ghostTextArea;
 
         this.padding = parseInt(window.getComputedStyle(this.textArea).padding);
-
-        /** @type {Map<HTMLElement, number>} Maps each (active) cursor to their last activity timestamp (ms) */
-        this.activeCursors = new Map();
+        
+        this.activeCursors = [];
 
         /** @type {string[]} List of colors assigned to cursors */
         this.colors = [
@@ -46,6 +39,9 @@ class RemoteCursorManager {
 
         // Offset that randomizes color assignment to cursors
         this.colorOffset = Math.floor(Math.random() * this.colors.length);
+
+        // Integer used to cycle through colors, assigning a different one at each connected user
+        this.colorCount = 0;
         
         /**
          * In order to implement height and scroll synchronization between the textarea and the overlay
@@ -63,9 +59,6 @@ class RemoteCursorManager {
          * This way, the height of the two container are exactly the same
          */
         this.stretcher = this.#createStretcherCursor();
-
-        // Start the inactivity cleanup timer
-        this.#startInactivityCleanup();
     }
 
     /**
@@ -85,17 +78,26 @@ class RemoteCursorManager {
 
         const cursor = this.#createCursorIfNotExists(username);
         this.#moveCursor(cursor, index);
-        this.#updateActivity(cursor);
     }
 
     /**
-     * Removes all active remote cursors from the overlay and clears all activity data
+     * Completely removes a remote cursor and all its data
+     * @param {string} username - The unique identifier for the user
+     */
+    deleteCursorByName(username) {
+        const cursor = document.getElementById(`cursor-${username}`);
+        if (!cursor) { return; }
+        this.activeCursors = this.activeCursors.filter(c => c != cursor);
+        cursor.remove();
+    }
+
+    /**
+     * Removes all active remote cursors from the overlay
      */
     clear() {
-        for (const cursor of this.activeCursors.keys()) {
-            this.#deleteCursor(cursor);
-        }
-    }    
+        this.activeCursors.forEach(cursor => cursor.remove());
+        this.activeCursors = []
+    }
 
     /**
      * Synchronizes the height of the overlay with the one of the textarea.
@@ -120,32 +122,6 @@ class RemoteCursorManager {
         stretcher.style.visibility = "hidden";
         this.overlay.appendChild(stretcher);
         return stretcher;
-    }
-
-    /**
-     * Starts a periodic timer to check for and remove cursors that have been inactive
-     *  for longer than the defined timeout
-     * @private
-     */
-    #startInactivityCleanup() {
-        this.cleanupInterval = setInterval(() => {
-            const now = Date.now();
-            for (const [cursor, lastActivity] of this.activeCursors.entries()) {
-                if (now - lastActivity > RemoteCursorManager.#INACTIVITY_TIMEOUT_MS) {
-                    console.info(`Removing inactive cursor for user: ${cursor.getAttribute("data-username")}`);
-                    this.#deleteCursor(cursor);
-                }
-            }
-        }, RemoteCursorManager.#INACTIVITY_CHECK_FREQUENCY_MS);
-    }
-
-    /**
-     * Updates the last activity timestamp for a specific cursor
-     * @private
-     * @param {HTMLElement} cursor - The cursor DOM element
-     */
-    #updateActivity(cursor) {
-        this.activeCursors.set(cursor, Date.now());
     }
 
     /**
@@ -175,22 +151,13 @@ class RemoteCursorManager {
         cursor.setAttribute("data-username", username);
         cursor.setAttribute("data-index", "0");
         cursor.style.backgroundColor = this.colors[
-            (this.activeCursors.size + this.colorOffset) % this.colors.length
+            (this.colorCount + this.colorOffset) % this.colors.length
         ];
         this.overlay.appendChild(cursor);
-        this.#updateActivity(cursor);
+        this.activeCursors.push(cursor);
+        this.colorCount++;
         console.info(`Created cursor for user ${username}`)
         return cursor;
-    }
-
-    /**
-     * Completely removes a remote cursor and all its data
-     * @private
-     * @param {HTMLElement} cursor - The cursor to remove
-     */
-    #deleteCursor(cursor) {
-        this.activeCursors.delete(cursor);
-        cursor.remove();
     }
 
     /**

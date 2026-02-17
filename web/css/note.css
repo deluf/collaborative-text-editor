@@ -73,11 +73,14 @@
     font-size: 11pt;
     font-weight: bold;
     background-color: inherit;
-    /* Makes it as wide as the username */
-    white-space: nowrap;
     padding: 0 5px 0 5px;
     border: 1px solid #000000; 
     box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
+    
+    white-space: nowrap;      /* Makes it as wide as the username */
+    max-width: 16ch;          /* Limits width to ~16 characters */
+    overflow: hidden;         /* Hides anything beyond 16ch */
+    text-overflow: ellipsis;  /* Adds '...' at the end if it cuts off */
 }
 
 #clippy {
