@@ -73,6 +73,16 @@ class CollaborativeSocketClient {
     }
 
     /**
+     * Attempts to flush any queued (offline) edits
+     */
+    flushQueuedEdits() {
+        if (this.editsQueue.length === 0) { return; }
+        console.info(`Flushing ${this.editsQueue.length} edits in queue...`);
+        this.editsQueue.forEach(edit => this.sendEdit(edit));
+        this.editsQueue = [];
+    }
+
+    /**
      * Establishes the WebSocket connection and binds the event listeners
      * @private
      */
@@ -107,15 +117,6 @@ class CollaborativeSocketClient {
 
         // Reset the reconnection delay
         this.reconnectDelay = CollaborativeSocketClient.#BASE_RECONNECT_DELAY_MS;
-        
-        // Flush queued edits (if any)
-        if (this.editsQueue.length > 0) {
-            console.info(`Socket reconnected - sending ${this.editsQueue.length} edits in queue...`);
-            for (const edit of this.editsQueue) {
-                this.sendEdit(edit);
-            }
-            this.editsQueue = [];
-        }
     }
 
     /**

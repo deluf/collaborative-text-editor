@@ -233,5 +233,6 @@ function processIncomingSyncMessage(syncMessage) {
     }
     NOTE_VIEW.updateStats("<SERVER>");
     CURSOR_MANAGER.overlayHeightSync();
-}
 
+    SOCKET.flushQueuedEdits();
+}
