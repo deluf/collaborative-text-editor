@@ -1,5 +1,6 @@
 import { NoteItem } from "./noteItem.js";
 import { Database } from "./database.js";
+import { CONNECTION_STATUS } from "./collaborativeSocketClient.js";
 
 export { NoteView };
 
@@ -59,12 +60,12 @@ class NoteView {
 
     /**
      * Updates the connection status UI
-     * @param {boolean} isOnline - True if connected, false otherwise
+     * @param {CONNECTION_STATUS} status - The status of the connection
+     * @param {string} text - The additional info text displayed next to the status value
      */
-    setConnectionStatus = (isOnline) => {
-        const statusText = isOnline ? "online" : "offline";
-        this.GUI.connectionStatus.innerText = statusText;
-        this.GUI.connectionStatus.dataset.status = statusText;
+    setConnectionStatus = (status, text="") => {
+        this.GUI.connectionStatus.dataset.status = status;
+        this.GUI.connectionStatus.innerText = status + " " + text;
     }
 
     /**

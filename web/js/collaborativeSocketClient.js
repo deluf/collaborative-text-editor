@@ -2,7 +2,11 @@
 
 import Ajv from "https://esm.sh/ajv";
 
-export { CollaborativeSocketClient, ACTION, EditMessage, SyncMessage };
+export { 
+    CollaborativeSocketClient, 
+    CONNECTION_STATUS, ACTION,
+    EditMessage, SyncMessage, QueueMessage 
+};
 
 /**
  * Manages the WebSocket connection to a server for real-time collaboration on a specific note.
@@ -29,16 +33,20 @@ class CollaborativeSocketClient {
      *  a valid edit message is received
      * @param {function(SyncMessage): void} onSyncMessageReceived - Callback function invoked when
      *  a valid sync message is received
-     * @param {function(boolean): void} onConnectionStatusChange - Callback invoked when the
-     *  connection state changes (true = online, false = offline)
+     * @param {function(QueueMessage): void} onQueueMessageReceived - Callback function invoked when
+     *  a valid quque message is received
+     * @param {function(CONNECTION_STATUS): void} onConnectionStatusChange - Callback invoked when the
+     *  connection state changes
      */
     constructor(
         protocol, hostname, port, noteUUID,
-        onEditMessageReceived, onSyncMessageReceived, onConnectionStatusChange
+        onEditMessageReceived, onSyncMessageReceived, onQueueMessageReceived,
+        onConnectionStatusChange
     ) {
         this.url = `${protocol}://${hostname}:${port}/${noteUUID}`;
         this.onEditMessageReceived = onEditMessageReceived;
         this.onSyncMessageReceived = onSyncMessageReceived;
+        this.onQueueMessageReceived = onQueueMessageReceived;
         this.onConnectionStatusChange = onConnectionStatusChange;
 
         this.reconnectDelay = CollaborativeSocketClient.#BASE_RECONNECT_DELAY_MS;
@@ -48,8 +56,9 @@ class CollaborativeSocketClient {
         this.editsQueue = [];
 
         const ajv = new Ajv();
-        this.validateSyncMessage = ajv.compile(syncMessageSchema);
         this.validateEditMessage = ajv.compile(editMessageSchema);
+        this.validateSyncMessage = ajv.compile(syncMessageSchema);
+        this.validateQueueMessage = ajv.compile(queueMessageSchema);
 
         this.#connect();
     }
@@ -97,7 +106,7 @@ class CollaborativeSocketClient {
      */
     #onOpen = () => {
         console.info(`Connected to ${this.url}`);
-        this.onConnectionStatusChange(true);
+        this.onConnectionStatusChange(CONNECTION_STATUS.ONLINE);
         
         // Clear the reconnect timer
         if (this.reconnectTimeoutId) {
@@ -107,23 +116,50 @@ class CollaborativeSocketClient {
 
         // Reset the reconnection delay
         this.reconnectDelay = CollaborativeSocketClient.#BASE_RECONNECT_DELAY_MS;
-
-        this.#flushQueuedEdits();
     }
 
     /**
-     * Attempts to flush any queued (offline) edits and then reconnect
-     * @private
+     * Attempts to flush any queued (offline) edits and then SYNCs again.
+     * Should be called as soon as a SYNC message is received
+     * 
+     * Rationale:
+     * 
+     * We can't try to flush edits right after socket reconnection because 
+     *  a) we could end in a queue - therefore our flushed edits would be discarded 
+     *  b) the SYNC message received later would visually overwrite our offline changes
+     *    (the server has not yet processed them)
+     * 
+     * We therefore flush them right after a SYNC message: this proves that we are
+     *  allowed to edit the note. 
+     * 
+     * There is only a problem: the SYNC message overwrites our offline changes. 
+     * 
+     * We therefore operate in the following way:
+     *  - When a SYNC is received, call this function
+     *  - If there are queued edits the SYNC message is discarded, the edits are sent
+     *   and then a new SYNC message is requested (SYNCREQ)
+     * 
+     * @returns {boolean} - Whether the queue contained edits or not
      */
-    #flushQueuedEdits() {
-        if (this.editsQueue.length === 0) { return; }
+    flushQueuedEdits() {
+        if (this.editsQueue.length === 0) { return false; }
         console.info(`Flushing ${this.editsQueue.length} edits in queue...`);
         this.editsQueue.forEach(edit => this.sendEdit(edit));
         this.editsQueue = [];
-        // Connect again to receive the SYNC message with our updates.
-        // This is mandatory otherwise right after (or in-between) flushing
-        //  offline edits i could receive an old SYNC message
-        this.#connect();
+        this.#syncRequest();
+        return true;
+    }
+
+    /**
+     * Sends a SYNC request to the server
+     * @private
+     */
+    #syncRequest() {
+        if (this.socket.readyState !== WebSocket.OPEN) { return; }
+        const syncReq = { action: ACTION.SYNCREQ };
+        console.debug("Sending: ", syncReq);
+        const jsonString = JSON.stringify(syncReq);
+        this.socket.send(jsonString);
     }
 
     /**
@@ -133,7 +169,7 @@ class CollaborativeSocketClient {
      */
     #onClose = () => {
         console.warn(`Socket closed unexpectedly - reconnecting in ${this.reconnectDelay} ms ...`);
-        this.onConnectionStatusChange(false);
+        this.onConnectionStatusChange(CONNECTION_STATUS.OFFLINE);
 
         this.reconnectTimeoutId = setTimeout(() => {
             this.reconnectDelay = Math.min(
@@ -157,10 +193,22 @@ class CollaborativeSocketClient {
 
         if (this.validateEditMessage(data)) { this.onEditMessageReceived(data); }
         else if (this.validateSyncMessage(data)) { this.onSyncMessageReceived(data); }
+        else if (this.validateQueueMessage(data)) { this.onQueueMessageReceived(data); }
         else { console.warn("Received unknown message format: ", data); return; }
     }
 
 }
+
+/**
+ * Enumeration of possible connection statuses
+ * @readonly
+ * @enum {string}
+ */
+const CONNECTION_STATUS = {
+    OFFLINE: "offline",
+    QUEUED: "queued",
+    ONLINE: "online",
+};
 
 /**
  * Enumeration of supported action types for document operations
@@ -168,15 +216,12 @@ class CollaborativeSocketClient {
  * @enum {string}
  */
 const ACTION = {
-    /** A new character is being added to the document */
     INSERT: "INSERT",
-    /** An existing character is being removed from the document */
     DELETE: "DELETE",
-    /** A user's cursor has changed position */
     MOVE: "MOVE",
-    /** A user disconnected */
     DISCONNECT: "DISCONNECT",
-    /** A full document state synchronization payload */
+    QUEUE: "QUEUE",
+    SYNCREQ: "SYNCREQ",
     SYNC: "SYNC"
 };
 
@@ -294,5 +339,36 @@ class SyncMessage {
         this.action = action;
         this.data = data;
         this.cursors = cursors;
+    }
+}
+
+/**
+ * JSON Schema for validating Queue messages
+ */
+const queueMessageSchema = {
+    type: "object",
+    properties: {
+        action: { 
+            type: "string",
+            enum: [ACTION.QUEUE] 
+        },
+        position: { type: "integer", minimum: 0 },
+    },
+    required: ["action", "position"],
+    additionalProperties: false
+};
+
+/**
+ * Represents a synchronization event containing the current state of the whole document
+ */
+class QueueMessage {
+    /**
+     * @param {Object} parameters
+     * @param {string} [parameters.action=ACTION.QUEUE] - The action identifier (must be ACTION.QUEUE)
+     * @param {number} parameters.position - The current position in queue (i.e., the numer of users in front of you)
+     */
+    constructor({ action = ACTION.SYNC, position }) {
+        this.action = action;
+        this.position = position;
     }
 }

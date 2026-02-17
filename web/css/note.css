@@ -42,6 +42,11 @@
     outline: none;
 }
 
+#textarea:disabled {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+}
+
 /* Holds the remote cursors */
 #overlay {
     /* Sits on top */
@@ -131,4 +136,10 @@
     background-color: #c82828;
     background-image: radial-gradient(#a72525 1px, #c82828 0px);
     border: 0.5px solid rgb(103, 0, 0);
+}
+
+#connection-status[data-status="queue"]::after {
+    background-color: #c88328;
+    background-image: radial-gradient(#a76025 1px, #c88328 0px);
+    border: 0.5px solid rgb(103, 52, 0);
 }

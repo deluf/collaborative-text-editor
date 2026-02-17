@@ -51,8 +51,3 @@ cp collaborative-text-editor/nginx.conf /etc/nginx/sites-available/default
 nginx -t
 systemctl reload nginx
 ```
-
----
-
-## TODO:
-Maximum number of active users per document, with extra users having to wait in queue

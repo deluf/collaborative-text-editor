@@ -5,7 +5,11 @@ import { NoteItem } from "./noteItem.js";
 import { Database } from "./database.js";
 import { RemoteCursorManager } from "./remoteCursorManager.js";
 import { FractionalIdManager } from "./fractionalIdManager.js";
-import { CollaborativeSocketClient, ACTION, EditMessage, SyncMessage } from "./collaborativeSocketClient.js";
+import { 
+    CollaborativeSocketClient, 
+    CONNECTION_STATUS, ACTION,
+    EditMessage, SyncMessage, QueueMessage
+} from "./collaborativeSocketClient.js";
 
 /**
  * @fileoverview Main client-side controller for the collaborative note editor
@@ -26,7 +30,8 @@ const NOTE_VIEW = new NoteView(
 
 const SOCKET = new CollaborativeSocketClient(
     protocol, hostname, port, openNote.uuid,
-    processIncomingEditMessage, processIncomingSyncMessage, NOTE_VIEW.setConnectionStatus
+    processIncomingEditMessage, processIncomingSyncMessage, processIncomingQueueMessage,
+    onConnectionStatusChange
 );
 
 const FRACTIONAL_ID_MANAGER = new FractionalIdManager();
@@ -72,6 +77,16 @@ function loadNoteOrCreateIfNew() {
 }
 
 /*  --- Callback functions --- */
+
+/**
+ * Handles changes in the connection status
+ * @param {CONNECTION_STATUS} status - The status of the connection
+ */
+function onConnectionStatusChange(status) {
+    if (status === CONNECTION_STATUS.QUEUED) {
+
+    }
+}
 
 /**
  * Handles a local character insertion event triggered by the UI.
@@ -208,10 +223,13 @@ function onRemoteDisconnect(edit) {
  * @param {SyncMessage} syncMessage - The complete state sync message from the server
  */
 function processIncomingSyncMessage(syncMessage) {
+    if (SOCKET.flushQueuedEdits()) { return };
+
     console.debug("Received sync message: ", syncMessage);
     CURSOR_MANAGER.clear();
     FRACTIONAL_ID_MANAGER.clear();
     NOTE_VIEW.GUI.textArea.value = "";
+    NOTE_VIEW.GUI.textArea.disabled = false;
     
     // Populate document
     const document = [];
@@ -233,4 +251,20 @@ function processIncomingSyncMessage(syncMessage) {
     }
     NOTE_VIEW.updateStats("<SERVER>");
     CURSOR_MANAGER.overlayHeightSync();
+}
+
+/**
+ * Processes an incoming queue message
+ * @param {QueueMessage} queueMesssage - The queue message payload
+ */
+function processIncomingQueueMessage(queueMesssage) {
+    console.debug("Received queue message: ", queueMesssage);
+    CURSOR_MANAGER.clear();
+    FRACTIONAL_ID_MANAGER.clear();
+    NOTE_VIEW.GUI.textArea.value = "";
+    NOTE_VIEW.GUI.textArea.disabled = true;
+    NOTE_VIEW.setConnectionStatus(
+        CONNECTION_STATUS.QUEUED,
+        `(${queueMesssage.position} before you)`
+    );
 }
