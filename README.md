@@ -2,7 +2,7 @@
 # Installation instructions
 
 Nodes:
-- 10.2.1.   (Nginx)
+- 10.2.1.3   (Nginx)
 - 10.2.1.24 (Erlang node1)
 - 10.2.1.41 (Erlang node2)
 - 10.2.1.42 (Erlang node3)
@@ -18,7 +18,7 @@ chmod +x rebar3
 mv rebar3 /usr/local/bin/
 ```
 
-Then, create a `deploy.sh` script:
+Then, create a `deploy.sh` script to automatically update and run the application:
 ```bash
 clear
 cd --
@@ -39,12 +39,15 @@ apt install nginx
 systemctl start nginx
 ```
 
-Finally, create a `deploy.sh` script:
+Finally, create a `deploy.sh` script to automatically update and run the application:
 ```bash
+clear
 cd --
+rm -rf collaborative-text-editor
+git clone https://github.com/deluf/collaborative-text-editor
 rm -rf /var/www/html/*
 mv collaborative-text-editor/web/* /var/www/html/
-cp nginx.conf /etc/nginx/sites-available/default
+cp collaborative-text-editor/nginx.conf /etc/nginx/sites-available/default
 nginx -t
 systemctl reload nginx
 ```

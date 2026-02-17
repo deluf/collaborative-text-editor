@@ -16,7 +16,7 @@ import { CollaborativeSocketClient, ACTION, EditMessage, SyncMessage } from "./c
 const USERNAME = Database.getUsername();
 
 const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-const hostname = "10.2.1.24" // Load balancer
+const hostname = "10.2.1.3"
 const port = 8080;
 const openNote = loadNoteOrCreateIfNew();
 
@@ -233,6 +233,4 @@ function processIncomingSyncMessage(syncMessage) {
     }
     NOTE_VIEW.updateStats("<SERVER>");
     CURSOR_MANAGER.overlayHeightSync();
-
-    SOCKET.flushQueuedEdits();
 }
