@@ -112,7 +112,7 @@ class CollaborativeSocketClient {
     }
 
     /**
-     * Attempts to flush any queued (offline) edits
+     * Attempts to flush any queued (offline) edits and then reconnect
      * @private
      */
     #flushQueuedEdits() {
@@ -120,6 +120,9 @@ class CollaborativeSocketClient {
         console.info(`Flushing ${this.editsQueue.length} edits in queue...`);
         this.editsQueue.forEach(edit => this.sendEdit(edit));
         this.editsQueue = [];
+        // Connect again to receive the SYNC message with our updates.
+        // This is mandatory otherwise right after (or in-between) flushing
+        //  offline edits i could receive an old SYNC message
         this.#connect();
     }
 

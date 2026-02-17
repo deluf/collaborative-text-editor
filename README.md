@@ -55,5 +55,4 @@ systemctl reload nginx
 ---
 
 ## TODO:
-Maximum number of active users per document, with extra users having to wait in queue ?
-send queued edits AFTER the sync!!! - not trivial...
+Maximum number of active users per document, with extra users having to wait in queue
