@@ -9,6 +9,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2]).
 
 -define(SAVE_EVERY, 50).
+-define(SAVE_INTERVAL, 30000).
 
 -record(state, {
     doc_id, 
@@ -54,6 +55,7 @@ init([DocId]) ->
         [] -> crdt_core:new();
         [#editor_docs{content = SavedDoc}] -> SavedDoc
     end,
+    erlang:send_after(?SAVE_INTERVAL, self(), trigger_save),
     {ok, #state{doc_id = DocId, doc = InitialDoc, cursors = #{}, pid_users = #{}, op_count = 0}}.
 
 handle_call(get_text, _From, State) ->
@@ -88,6 +90,21 @@ handle_cast({move, SenderPid, UserId, Pos}, State) ->
     NewCursors = maps:put(UserId, Pos, State#state.cursors),
     broadcast(State#state.clients, SenderPid, {move, UserId, Pos}),
     {noreply, State#state{cursors = NewCursors, pid_users = NewPidUsers}}.
+
+handle_info(trigger_save, State) ->
+    erlang:send_after(?SAVE_INTERVAL, self(), trigger_save),
+
+    NewState = case State#state.op_count > 0 of
+        true ->
+            mnesia:dirty_write(#editor_docs{
+                doc_id = State#state.doc_id, 
+                content = State#state.doc
+            }),
+            State#state{op_count = 0};
+        false ->
+            State
+    end,
+    {noreply, NewState};
 
 handle_info({'DOWN', _Ref, process, Pid, _Reason}, State) ->
     %% 1. Find which user belongs to this Pid
