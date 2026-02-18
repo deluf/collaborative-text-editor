@@ -8,14 +8,16 @@
 %% Callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2]).
 
+-define(SAVE_EVERY, 50).
+
 -record(state, {
     doc_id, 
     doc = crdt_core:new(),
     cursors = #{},
     clients = [],
-    pid_users = #{}
+    pid_users = #{},
+    op_count = 0
 }).
-
 -record(editor_docs, {doc_id, content}).
 
 %%%===================================================================
@@ -52,7 +54,7 @@ init([DocId]) ->
         [] -> crdt_core:new();
         [#editor_docs{content = SavedDoc}] -> SavedDoc
     end,
-    {ok, #state{doc_id = DocId, doc = InitialDoc, cursors = #{}, pid_users = #{}}}.
+    {ok, #state{doc_id = DocId, doc = InitialDoc, cursors = #{}, pid_users = #{}, op_count = 0}}.
 
 handle_call(get_text, _From, State) ->
     Text = crdt_core:to_string(State#state.doc),
@@ -73,13 +75,13 @@ handle_cast({insert, SenderPid, Id, UserId, Char}, State) ->
     NewPidUsers = maps:put(SenderPid, UserId, State#state.pid_users),
     NewDoc = crdt_core:insert(State#state.doc, Id, Char),
     broadcast(State#state.clients, SenderPid, {insert, Id, UserId, Char}),
-    {noreply, State#state{doc = NewDoc, pid_users = NewPidUsers}};
+    {noreply, maybe_save(State#state{doc = NewDoc, pid_users = NewPidUsers})};
 
 handle_cast({delete, SenderPid, Id, UserId}, State) ->
     NewPidUsers = maps:put(SenderPid, UserId, State#state.pid_users),
     NewDoc = crdt_core:delete(State#state.doc, Id),
     broadcast(State#state.clients, SenderPid, {delete, Id, UserId}),
-    {noreply, State#state{doc = NewDoc, pid_users = NewPidUsers}};
+    {noreply, maybe_save(State#state{doc = NewDoc, pid_users = NewPidUsers})};
 
 handle_cast({move, SenderPid, UserId, Pos}, State) ->
     NewPidUsers = maps:put(SenderPid, UserId, State#state.pid_users),
@@ -124,3 +126,16 @@ broadcast(Clients, SenderPid, Msg) ->
     lists:foreach(fun(Pid) -> 
         if Pid =/= SenderPid -> Pid ! Msg; true -> ok end 
     end, Clients).
+
+maybe_save(State) ->
+    Current = State#state.op_count + 1,
+    if 
+        Current >= ?SAVE_EVERY ->
+            mnesia:dirty_write(#editor_docs{
+                doc_id = State#state.doc_id, 
+                content = State#state.doc
+            }),
+            State#state{op_count = 0};
+        true ->
+            State#state{op_count = Current}
+    end.
