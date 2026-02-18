@@ -10,12 +10,14 @@
 
 -define(SAVE_EVERY, 50).
 -define(SAVE_INTERVAL, 30000).
+-define(MAX_ACTIVE, 2).
 
 -record(state, {
     doc_id, 
     doc = crdt_core:new(),
     cursors = #{},
-    clients = [],
+    active = [],
+    queue = [],
     pid_users = #{},
     op_count = 0
 }).
@@ -56,7 +58,7 @@ init([DocId]) ->
         [#editor_docs{content = SavedDoc}] -> SavedDoc
     end,
     erlang:send_after(?SAVE_INTERVAL, self(), trigger_save),
-    {ok, #state{doc_id = DocId, doc = InitialDoc, cursors = #{}, pid_users = #{}, op_count = 0}}.
+    {ok, #state{doc_id = DocId, doc = InitialDoc, cursors = #{}, pid_users = #{}, op_count = 0, active = [], queue = []}}.
 
 handle_call(get_text, _From, State) ->
     Text = crdt_core:to_string(State#state.doc),
@@ -64,36 +66,65 @@ handle_call(get_text, _From, State) ->
 
 handle_cast({join, Pid}, State) ->
     erlang:monitor(process, Pid),
-    CursorList = maps:to_list(State#state.cursors),
-    Pid ! {sync_state, State#state.doc, CursorList},
-    {noreply, State#state{clients = [Pid | State#state.clients]}};
+    ActiveCount = length(State#state.active),
+    
+    if 
+        ActiveCount < ?MAX_ACTIVE ->
+            CursorList = maps:to_list(State#state.cursors),
+            Pid ! {sync_state, State#state.doc, CursorList},
+            {noreply, State#state{active = [Pid | State#state.active]}};
+        
+        true ->
+            QueuePos = length(State#state.queue), %% 0 based (0 = primo in attesa)
+            Pid ! {queue_update, QueuePos},
+            {noreply, State#state{queue = State#state.queue ++ [Pid]}}
+    end;
 
 handle_cast({sync_req, Pid}, State) ->
-    CursorList = maps:to_list(State#state.cursors),
-    Pid ! {sync_state, State#state.doc, CursorList},
+    case lists:member(Pid, State#state.active) of
+        true ->
+            CursorList = maps:to_list(State#state.cursors),
+            Pid ! {sync_state, State#state.doc, CursorList};
+        false ->
+            ok
+    end,
     {noreply, State};
 
 handle_cast({insert, SenderPid, Id, UserId, Char}, State) ->
-    NewPidUsers = maps:put(SenderPid, UserId, State#state.pid_users),
-    NewDoc = crdt_core:insert(State#state.doc, Id, Char),
-    broadcast(State#state.clients, SenderPid, {insert, Id, UserId, Char}),
-    {noreply, maybe_save(State#state{doc = NewDoc, pid_users = NewPidUsers})};
+    case lists:member(SenderPid, State#state.active) of
+        true ->
+            NewPidUsers = maps:put(SenderPid, UserId, State#state.pid_users),
+            NewDoc = crdt_core:insert(State#state.doc, Id, Char),
+            broadcast(State#state.active, SenderPid, {insert, Id, UserId, Char}),
+            {noreply, maybe_save(State#state{doc = NewDoc, pid_users = NewPidUsers})};
+        false ->
+            {noreply, State}
+    end;
 
 handle_cast({delete, SenderPid, Id, UserId}, State) ->
-    NewPidUsers = maps:put(SenderPid, UserId, State#state.pid_users),
-    NewDoc = crdt_core:delete(State#state.doc, Id),
-    broadcast(State#state.clients, SenderPid, {delete, Id, UserId}),
-    {noreply, maybe_save(State#state{doc = NewDoc, pid_users = NewPidUsers})};
+    case lists:member(SenderPid, State#state.active) of
+        true ->
+            NewPidUsers = maps:put(SenderPid, UserId, State#state.pid_users),
+            NewDoc = crdt_core:delete(State#state.doc, Id),
+            broadcast(State#state.active, SenderPid, {delete, Id, UserId}),
+            {noreply, maybe_save(State#state{doc = NewDoc, pid_users = NewPidUsers})};
+        false ->
+            {noreply, State}
+    end;
 
 handle_cast({move, SenderPid, UserId, Pos}, State) ->
-    NewPidUsers = maps:put(SenderPid, UserId, State#state.pid_users),
-    NewCursors = maps:put(UserId, Pos, State#state.cursors),
-    broadcast(State#state.clients, SenderPid, {move, UserId, Pos}),
-    {noreply, State#state{cursors = NewCursors, pid_users = NewPidUsers}}.
+    case lists:member(SenderPid, State#state.active) of
+        true ->
+            NewPidUsers = maps:put(SenderPid, UserId, State#state.pid_users),
+            NewCursors = maps:put(UserId, Pos, State#state.cursors),
+            broadcast(State#state.active, SenderPid, {move, UserId, Pos}),
+            {noreply, State#state{cursors = NewCursors, pid_users = NewPidUsers}};
+        false ->
+            {noreply, State}
+    end.
 
 handle_info(trigger_save, State) ->
     erlang:send_after(?SAVE_INTERVAL, self(), trigger_save),
-
     NewState = case State#state.op_count > 0 of
         true ->
             mnesia:dirty_write(#editor_docs{
@@ -107,42 +138,73 @@ handle_info(trigger_save, State) ->
     {noreply, NewState};
 
 handle_info({'DOWN', _Ref, process, Pid, _Reason}, State) ->
-    %% 1. Find which user belongs to this Pid
-    {UserToRemove, NewPidUsers} = case maps:find(Pid, State#state.pid_users) of
-        {ok, User} -> {User, maps:remove(Pid, State#state.pid_users)};
-        error -> {undefined, State#state.pid_users}
-    end,
-
-    %% 2. Remove their cursor and notify others
-    NewCursors = case UserToRemove of
-        undefined -> 
-            State#state.cursors;
-        _ ->
-            broadcast(State#state.clients, Pid, {remove_cursor, UserToRemove}),
-            maps:remove(UserToRemove, State#state.cursors)
-    end,
-
-    %% 3. Clean up client list
-    NewClients = lists:delete(Pid, State#state.clients),
+    IsActive = lists:member(Pid, State#state.active),
     
-    case NewClients of
-        [] ->
-            mnesia:dirty_write(#editor_docs{
-                doc_id = State#state.doc_id, 
-                content = State#state.doc
-            }),
-            {stop, normal, State#state{clients = [], cursors = NewCursors, pid_users = NewPidUsers}};
-        _ ->
-            {noreply, State#state{clients = NewClients, cursors = NewCursors, pid_users = NewPidUsers}}
+    if 
+        IsActive ->
+            NewActivePre = lists:delete(Pid, State#state.active),
+
+            {UserToRemove, NewPidUsers} = case maps:find(Pid, State#state.pid_users) of
+                {ok, User} -> {User, maps:remove(Pid, State#state.pid_users)};
+                error -> {undefined, State#state.pid_users}
+            end,
+            NewCursors = case UserToRemove of
+                undefined -> State#state.cursors;
+                _ ->
+                    broadcast(NewActivePre, Pid, {remove_cursor, UserToRemove}),
+                    maps:remove(UserToRemove, State#state.cursors)
+            end,
+
+            {NewActive, NewQueue} = case State#state.queue of
+                [] -> 
+                    {NewActivePre, []};
+                [PromotedPid | RestQueue] ->
+                    CursorList = maps:to_list(NewCursors),
+                    PromotedPid ! {sync_state, State#state.doc, CursorList},
+                    notify_queue_positions(RestQueue),
+                    {[PromotedPid | NewActivePre], RestQueue}
+            end,
+
+            case NewActive of
+                [] ->
+                    io:format("All disconnected~n"),
+                    mnesia:dirty_write(#editor_docs{doc_id = State#state.doc_id, content = State#state.doc}),
+                    {stop, normal, State#state{active = [], queue = [], cursors = NewCursors, pid_users = NewPidUsers}};
+                _ ->
+                    {noreply, State#state{active = NewActive, queue = NewQueue, cursors = NewCursors, pid_users = NewPidUsers}}
+            end;
+
+        true ->
+            IsQueued = lists:member(Pid, State#state.queue),
+            if 
+                IsQueued ->
+                    NewQueue = lists:delete(Pid, State#state.queue),
+                    notify_queue_positions(NewQueue),
+                    {noreply, State#state{queue = NewQueue}};
+                true ->
+                    {noreply, State}
+            end
     end;
 
 handle_info(_Msg, State) ->
     {noreply, State}.
 
-broadcast(Clients, SenderPid, Msg) ->
+%%%===================================================================
+%%% Internal Functions
+%%%===================================================================
+
+broadcast(ActiveClients, SenderPid, Msg) ->
     lists:foreach(fun(Pid) -> 
         if Pid =/= SenderPid -> Pid ! Msg; true -> ok end 
-    end, Clients).
+    end, ActiveClients).
+
+notify_queue_positions(Queue) ->
+    notify_queue_recursive(Queue, 0).
+
+notify_queue_recursive([], _) -> ok;
+notify_queue_recursive([Pid | Rest], Pos) ->
+    Pid ! {queue_update, Pos},
+    notify_queue_recursive(Rest, Pos + 1).
 
 maybe_save(State) ->
     Current = State#state.op_count + 1,

@@ -58,36 +58,27 @@ websocket_handle(_Data, State) ->
 %% 4. OUTGOING MESSAGES (From Erlang Processes)
 %% ===================================================================
 
-websocket_info({insert, Id, User, Char}, State) ->
+websocket_info({queue_update, Pos}, State) ->
     Resp = #{
-        action => <<"INSERT">>,
-        id  => Id, 
-        username => User, 
-        char => Char
+        action => <<"QUEUE">>,
+        position => Pos
     },
+    {reply, {text, jsx:encode(Resp)}, State};
+
+websocket_info({insert, Id, User, Char}, State) ->
+    Resp = #{action => <<"INSERT">>, id => Id, username => User, char => Char},
     {reply, {text, jsx:encode(Resp)}, State};
 
 websocket_info({delete, Id, User}, State) ->
-    Resp = #{
-        action => <<"DELETE">>, 
-        id  => Id, 
-        username => User
-    },
+    Resp = #{action => <<"DELETE">>, id => Id, username => User},
     {reply, {text, jsx:encode(Resp)}, State};
 
 websocket_info({move, User, Id}, State) ->
-    Resp = #{
-        action => <<"MOVE">>,
-        username => User,
-        id  => Id
-    },
+    Resp = #{action => <<"MOVE">>, username => User, id => Id},
     {reply, {text, jsx:encode(Resp)}, State};
 
 websocket_info({remove_cursor, User}, State) ->
-    Resp = #{
-        action => <<"DISCONNECT">>,
-        username => User
-    },
+    Resp = #{action => <<"DISCONNECT">>, username => User},
     {reply, {text, jsx:encode(Resp)}, State};
 
 websocket_info({sync_state, Doc, Cursors}, State) ->
@@ -100,5 +91,4 @@ websocket_info({sync_state, Doc, Cursors}, State) ->
     },
     {reply, {text, jsx:encode(Resp)}, State};
 
-websocket_info(_Info, State) ->
-    {ok, State}.
+websocket_info(_Info, State) -> {ok, State}.
