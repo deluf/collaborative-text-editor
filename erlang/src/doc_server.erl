@@ -13,38 +13,53 @@
 -define(MAX_ACTIVE, 2).
 
 -record(state, {
-    doc_id, 
-    doc = crdt_core:new(),
-    cursors = #{},
-    active = [],
-    queue = [],
-    pid_users = #{},
-    op_count = 0
+    doc_id          :: term(), 
+    doc = []        :: list(),
+    cursors = #{}   :: map(),
+    active = []     :: [pid()],
+    queue = []      :: [pid()],
+    pid_users = #{} :: map(),
+    op_count = 0    :: non_neg_integer()
 }).
+
 -record(editor_docs, {doc_id, content}).
 
 %%%===================================================================
 %%% Client API
 %%%===================================================================
 
+%% @doc Starts a gen_server process registered globally for the given DocId.
+-spec start_link(term()) -> {ok, pid()} | {error, any()}.
 start_link(DocId) ->
     gen_server:start_link({global, {doc, DocId}}, ?MODULE, [DocId], []).
 
+%% @doc Requests to join a document session.
+-spec join(term(), pid()) -> ok.
 join(DocId, Pid) ->
     gen_server:cast({global, {doc, DocId}}, {join, Pid}).
 
+%% @doc Requests a full state sync for the client.
+-spec request_sync(term(), pid()) -> ok.
 request_sync(DocId, Pid) ->
     gen_server:cast({global, {doc, DocId}}, {sync_req, Pid}).
 
+%% @doc Retrieves the current text content of the document.
+-spec get_text(term()) -> string().
 get_text(DocId) ->
     gen_server:call({global, {doc, DocId}}, get_text).
 
+%% @doc Inserts a character into the document.
+-spec add_char(term(), pid(), term(), binary(), char()) -> ok.
 add_char(DocId, SenderPid, Id, User, Char) ->
     gen_server:cast({global, {doc, DocId}}, {insert, SenderPid, Id, User, Char}).
 
+%% @doc Removes a character from the document.
+-spec remove_char(term(), pid(), term(), binary()) -> ok.
 remove_char(DocId, SenderPid, Id, User) ->
     gen_server:cast({global, {doc, DocId}}, {delete, SenderPid, Id, User}).
 
+%% @doc Updates the cursor position for a user.
+-spec move_cursor(term(), pid(), binary(), term()) -> ok.
 move_cursor(DocId, SenderPid, User, Pos) ->
     gen_server:cast({global, {doc, DocId}}, {move, SenderPid, User, Pos}).
 
@@ -75,7 +90,7 @@ handle_cast({join, Pid}, State) ->
             {noreply, State#state{active = [Pid | State#state.active]}};
         
         true ->
-            QueuePos = length(State#state.queue), %% 0 based (0 = primo in attesa)
+            QueuePos = length(State#state.queue), 
             Pid ! {queue_update, QueuePos},
             {noreply, State#state{queue = State#state.queue ++ [Pid]}}
     end;

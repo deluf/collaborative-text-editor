@@ -1,12 +1,17 @@
 -module(ws_handler).
+
 -export([init/2]).
 -export([websocket_init/1, websocket_handle/2, websocket_info/2]).
 
+%% @doc Initializes the Cowboy WebSocket handler.
+%% Extracts the doc_id from the binding and passes it to the WebSocket state.
 init(Req, _Opts) ->
     DocId = cowboy_req:binding(doc_id, Req),
     State = #{doc_id => DocId},
     {cowboy_websocket, Req, State}.
 
+%% @doc Callback after the WebSocket connection is established.
+%% Joins the document session via the doc_registry and doc_server.
 websocket_init(State) ->
     DocId = maps:get(doc_id, State),
     io:format("Joined for document: ~p~n", [DocId]), 
@@ -14,9 +19,8 @@ websocket_init(State) ->
     doc_server:join(DocId, self()),
     {ok, State}.
 
-%% ===================================================================
-%% 3. INCOMING MESSAGES (From Client Browser)
-%% ===================================================================
+%% @doc Handles incoming frames from the client.
+%% Decodes JSON messages for actions like SYNCREQ, INSERT, DELETE, and MOVE.
 websocket_handle({text, Json}, State) ->
     DocId = maps:get(doc_id, State),
 
@@ -54,10 +58,8 @@ websocket_handle({text, Json}, State) ->
 websocket_handle(_Data, State) ->
     {ok, State}.
 
-%% ===================================================================
-%% 4. OUTGOING MESSAGES (From Erlang Processes)
-%% ===================================================================
-
+%% @doc Handles Erlang messages sent to the WebSocket process.
+%% Encodes internal messages (queue updates, inserts, deletes) into JSON for the client.
 websocket_info({queue_update, Pos}, State) ->
     Resp = #{
         action => <<"QUEUE">>,
