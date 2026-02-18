@@ -9,7 +9,7 @@ init(Req, _Opts) ->
 
 websocket_init(State) ->
     DocId = maps:get(doc_id, State),
-    io:format("Joined for document: ~p~n", [DocId]), % FIXME: Debug only - remove later
+    io:format("Joined for document: ~p~n", [DocId]), 
     doc_registry:get_server(DocId),
     doc_server:join(DocId, self()),
     {ok, State}.
@@ -24,6 +24,9 @@ websocket_handle({text, Json}, State) ->
         Map = jsx:decode(Json, [return_maps]),
 
         case maps:get(<<"action">>, Map, undefined) of
+            <<"SYNCREQ">> ->
+                doc_server:request_sync(DocId, self());
+
             <<"INSERT">> ->
                 Char = maps:get(<<"char">>, Map),
                 Id   = maps:get(<<"id">>, Map),
