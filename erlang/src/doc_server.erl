@@ -146,6 +146,7 @@ handle_info(trigger_save, State) ->
                 doc_id = State#state.doc_id, 
                 content = State#state.doc
             }),
+            io:format("elapsed SAVE_INTERVAL, backupping...~n", []),
             State#state{op_count = 0};
         false ->
             State
@@ -229,6 +230,7 @@ maybe_save(State) ->
                 doc_id = State#state.doc_id, 
                 content = State#state.doc
             }),
+            io:format("reached SAVE_EVERY, backupping...~n", []),
             State#state{op_count = 0};
         true ->
             State#state{op_count = Current}
