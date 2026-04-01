@@ -1,13 +1,13 @@
 "use strict";
 
-import { NoteView } from "./noteView.js";
+import { NoteView, CONNECTION_STATUS } from "./noteView.js";
 import { NoteItem } from "./noteItem.js";
 import { Database } from "./database.js";
 import { RemoteCursorManager } from "./remoteCursorManager.js";
 import { FractionalIdManager } from "./fractionalIdManager.js";
 import { 
     CollaborativeSocketClient, 
-    CONNECTION_STATUS, ACTION,
+    ACTION,
     EditMessage, SyncMessage, QueueMessage
 } from "./collaborativeSocketClient.js";
 
@@ -30,8 +30,7 @@ const NOTE_VIEW = new NoteView(
 
 const SOCKET = new CollaborativeSocketClient(
     protocol, hostname, port, openNote.uuid,
-    processIncomingEditMessage, processIncomingSyncMessage, processIncomingQueueMessage,
-    onConnectionStatusChange
+    processIncomingEditMessage, processIncomingSyncMessage, processIncomingQueueMessage, onSocketClose
 );
 
 const FRACTIONAL_ID_MANAGER = new FractionalIdManager();
@@ -79,13 +78,10 @@ function loadNoteOrCreateIfNew() {
 /*  --- Callback functions --- */
 
 /**
- * Handles changes in the connection status
- * @param {CONNECTION_STATUS} status - The status of the connection
+ * Handles socket close events
  */
-function onConnectionStatusChange(status) {
-    if (status === CONNECTION_STATUS.QUEUED) {
-
-    }
+function onSocketClose() {
+    NOTE_VIEW.setConnectionStatus(CONNECTION_STATUS.OFFLINE);
 }
 
 /**
@@ -230,6 +226,7 @@ function processIncomingSyncMessage(syncMessage) {
     FRACTIONAL_ID_MANAGER.clear();
     NOTE_VIEW.GUI.textArea.value = "";
     NOTE_VIEW.GUI.textArea.disabled = false;
+    NOTE_VIEW.setConnectionStatus(CONNECTION_STATUS.ONLINE);
     
     // Populate document
     const document = [];

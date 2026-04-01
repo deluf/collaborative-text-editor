@@ -138,7 +138,7 @@
     border: 0.5px solid rgb(103, 0, 0);
 }
 
-#connection-status[data-status="queue"]::after {
+#connection-status[data-status="queued"]::after {
     background-color: #c88328;
     background-image: radial-gradient(#a76025 1px, #c88328 0px);
     border: 0.5px solid rgb(103, 52, 0);

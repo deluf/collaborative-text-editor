@@ -2,7 +2,18 @@ import { NoteItem } from "./noteItem.js";
 import { Database } from "./database.js";
 import { CONNECTION_STATUS } from "./collaborativeSocketClient.js";
 
-export { NoteView };
+export { NoteView, CONNECTION_STATUS };
+
+/**
+ * Enumeration of possible connection statuses
+ * @readonly
+ * @enum {string}
+ */
+const CONNECTION_STATUS = {
+    OFFLINE: "offline",
+    QUEUED: "queued",
+    ONLINE: "online",
+};
 
 /**
  * Handles the graphical user interface and event listeners for the open note

@@ -4,7 +4,7 @@ import Ajv from "https://esm.sh/ajv";
 
 export { 
     CollaborativeSocketClient, 
-    CONNECTION_STATUS, ACTION,
+    ACTION,
     EditMessage, SyncMessage, QueueMessage 
 };
 
@@ -35,19 +35,17 @@ class CollaborativeSocketClient {
      *  a valid sync message is received
      * @param {function(QueueMessage): void} onQueueMessageReceived - Callback function invoked when
      *  a valid quque message is received
-     * @param {function(CONNECTION_STATUS): void} onConnectionStatusChange - Callback invoked when the
-     *  connection state changes
+     * @param {function(): void} onSocketClose - Callback invoked when the socket closes
      */
     constructor(
         protocol, hostname, port, noteUUID,
-        onEditMessageReceived, onSyncMessageReceived, onQueueMessageReceived,
-        onConnectionStatusChange
+        onEditMessageReceived, onSyncMessageReceived, onQueueMessageReceived, onSocketClose
     ) {
         this.url = `${protocol}://${hostname}:${port}/${noteUUID}`;
         this.onEditMessageReceived = onEditMessageReceived;
         this.onSyncMessageReceived = onSyncMessageReceived;
         this.onQueueMessageReceived = onQueueMessageReceived;
-        this.onConnectionStatusChange = onConnectionStatusChange;
+        this.onSocketClose = onSocketClose;
 
         this.reconnectDelay = CollaborativeSocketClient.#BASE_RECONNECT_DELAY_MS;
         this.reconnectTimeoutId = null;
@@ -106,7 +104,6 @@ class CollaborativeSocketClient {
      */
     #onOpen = () => {
         console.info(`Connected to ${this.url}`);
-        this.onConnectionStatusChange(CONNECTION_STATUS.ONLINE);
         
         // Clear the reconnect timer
         if (this.reconnectTimeoutId) {
@@ -169,7 +166,7 @@ class CollaborativeSocketClient {
      */
     #onClose = () => {
         console.warn(`Socket closed unexpectedly - reconnecting in ${this.reconnectDelay} ms ...`);
-        this.onConnectionStatusChange(CONNECTION_STATUS.OFFLINE);
+        this.onSocketClose();
 
         this.reconnectTimeoutId = setTimeout(() => {
             this.reconnectDelay = Math.min(
@@ -198,17 +195,6 @@ class CollaborativeSocketClient {
     }
 
 }
-
-/**
- * Enumeration of possible connection statuses
- * @readonly
- * @enum {string}
- */
-const CONNECTION_STATUS = {
-    OFFLINE: "offline",
-    QUEUED: "queued",
-    ONLINE: "online",
-};
 
 /**
  * Enumeration of supported action types for document operations
