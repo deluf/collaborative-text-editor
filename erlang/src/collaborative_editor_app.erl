@@ -63,7 +63,7 @@ init_mnesia() ->
     end,
 
     case mnesia:create_table(editor_docs, [
-        {attributes, [doc_id, content]}, 
+        {attributes, [doc_id, content, last_active]}, 
         {disc_copies, [node()]} 
     ]) of
         {atomic, ok} -> 

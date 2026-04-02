@@ -2,15 +2,15 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1, join/2, get_text/1, request_sync/2]).
+-export([start_link/1, join/2, request_sync/2]).
 -export([add_char/5, remove_char/4, move_cursor/4]).
 
 %% Callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2]).
 
--define(SAVE_EVERY, 50).
--define(SAVE_INTERVAL, 30000).
--define(MAX_ACTIVE, 2).
+-define(SAVE_EVERY, 50). % 50 seconds
+-define(SAVE_INTERVAL, 30000). % 30 seconds
+-define(MAX_ACTIVE, 2). % 2 users simultaneously
 
 -record(state, {
     doc_id          :: term(), 
@@ -22,7 +22,7 @@
     op_count = 0    :: non_neg_integer()
 }).
 
--record(editor_docs, {doc_id, content}).
+-record(editor_docs, {doc_id, content, last_active = 0}).
 
 %%%===================================================================
 %%% Client API
@@ -42,11 +42,6 @@ join(DocId, Pid) ->
 -spec request_sync(term(), pid()) -> ok.
 request_sync(DocId, Pid) ->
     gen_server:cast({global, {doc, DocId}}, {sync_req, Pid}).
-
-%% @doc Retrieves the current text content of the document.
--spec get_text(term()) -> string().
-get_text(DocId) ->
-    gen_server:call({global, {doc, DocId}}, get_text).
 
 %% @doc Inserts a character into the document.
 -spec add_char(term(), pid(), term(), binary(), char()) -> ok.
@@ -73,11 +68,15 @@ init([DocId]) ->
         [#editor_docs{content = SavedDoc}] -> SavedDoc
     end,
     erlang:send_after(?SAVE_INTERVAL, self(), trigger_save),
-    {ok, #state{doc_id = DocId, doc = InitialDoc, cursors = #{}, pid_users = #{}, op_count = 0, active = [], queue = []}}.
-
-handle_call(get_text, _From, State) ->
-    Text = crdt_core:to_string(State#state.doc),
-    {reply, Text, State}.
+    {ok, #state{
+        doc_id = DocId, 
+        doc = InitialDoc, 
+        cursors = #{}, 
+        pid_users = #{}, 
+        op_count = 0, 
+        active = [], 
+        queue = []
+    }}.
 
 handle_cast({join, Pid}, State) ->
     erlang:monitor(process, Pid),
@@ -144,7 +143,8 @@ handle_info(trigger_save, State) ->
         true ->
             mnesia:dirty_write(#editor_docs{
                 doc_id = State#state.doc_id, 
-                content = State#state.doc
+                content = State#state.doc,
+                last_active = erlang:system_time(millisecond)
             }),
             io:format("elapsed SAVE_INTERVAL, backupping...~n", []),
             State#state{op_count = 0};
@@ -183,9 +183,15 @@ handle_info({'DOWN', _Ref, process, Pid, _Reason}, State) ->
 
             case NewActive of
                 [] ->
-                    io:format("All disconnected~n"),
-                    mnesia:dirty_write(#editor_docs{doc_id = State#state.doc_id, content = State#state.doc}),
-                    {stop, normal, State#state{active = [], queue = [], cursors = NewCursors, pid_users = NewPidUsers}};
+                    io:format("All disconnected. Saving timestamp and starting timer.~n"),
+                    Now = erlang:system_time(millisecond),
+                    mnesia:dirty_write(#editor_docs{
+                        doc_id = State#state.doc_id, 
+                        content = State#state.doc,
+                        last_active = Now
+                    }),
+                    
+                    {stop, normal, State};
                 _ ->
                     {noreply, State#state{active = NewActive, queue = NewQueue, cursors = NewCursors, pid_users = NewPidUsers}}
             end;
@@ -228,7 +234,8 @@ maybe_save(State) ->
         Current >= ?SAVE_EVERY ->
             mnesia:dirty_write(#editor_docs{
                 doc_id = State#state.doc_id, 
-                content = State#state.doc
+                content = State#state.doc,
+                last_active = erlang:system_time(millisecond)
             }),
             io:format("reached SAVE_EVERY, backupping...~n", []),
             State#state{op_count = 0};

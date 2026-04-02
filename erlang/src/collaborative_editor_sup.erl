@@ -31,7 +31,16 @@ init([]) ->
         intensity => 0,
         period => 1
     },
-    ChildSpecs = [],
+
+    ChildSpecs = [
+        #{id => doc_sweeper,
+          start => {doc_sweeper, start_link, []},
+          restart => permanent,
+          shutdown => 5000,
+          type => worker,
+          modules => [doc_sweeper]}
+    ],
+    
     {ok, {SupFlags, ChildSpecs}}.
 
 %% internal functions
