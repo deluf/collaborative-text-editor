@@ -1,6 +1,5 @@
 import { NoteItem } from "./noteItem.js";
 import { Database } from "./database.js";
-import { CONNECTION_STATUS } from "./collaborativeSocketClient.js";
 
 export { NoteView, CONNECTION_STATUS };
 
