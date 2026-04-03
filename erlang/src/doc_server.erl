@@ -2,7 +2,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1, join/2, get_text/1, request_sync/2]).
+-export([start_link/1, join/2, request_sync/2]).
 -export([add_char/5, remove_char/4, move_cursor/4]).
 
 %% Callbacks
@@ -43,11 +43,6 @@ join(DocId, Pid) ->
 request_sync(DocId, Pid) ->
     gen_server:cast({global, {doc, DocId}}, {sync_req, Pid}).
 
-%% @doc Retrieves the current text content of the document.
--spec get_text(term()) -> string().
-get_text(DocId) ->
-    gen_server:call({global, {doc, DocId}}, get_text).
-
 %% @doc Inserts a character into the document.
 -spec add_char(term(), pid(), term(), binary(), char()) -> ok.
 add_char(DocId, SenderPid, Id, User, Char) ->
@@ -74,10 +69,6 @@ init([DocId]) ->
     end,
     erlang:send_after(?SAVE_INTERVAL, self(), trigger_save),
     {ok, #state{doc_id = DocId, doc = InitialDoc, cursors = #{}, pid_users = #{}, op_count = 0, active = [], queue = []}}.
-
-handle_call(get_text, _From, State) ->
-    Text = crdt_core:to_string(State#state.doc),
-    {reply, Text, State}.
 
 handle_cast({join, Pid}, State) ->
     erlang:monitor(process, Pid),
