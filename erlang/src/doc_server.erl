@@ -10,7 +10,7 @@
 
 -define(SAVE_EVERY, 50). % 50 operations
 -define(SAVE_INTERVAL, 30000). % 30 seconds
--define(MAX_ACTIVE, 2). % 2 users simultaneously
+-define(MAX_ACTIVE, 10). % users simultaneously
 
 -record(state, {
     doc_id          :: term(), 
