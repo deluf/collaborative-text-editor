@@ -8,9 +8,9 @@
 %% Callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2]).
 
--define(SAVE_EVERY, 50).
--define(SAVE_INTERVAL, 30000).
--define(MAX_ACTIVE, 2).
+-define(SAVE_EVERY, 50). % 50 operations
+-define(SAVE_INTERVAL, 30000). % 30 seconds
+-define(MAX_ACTIVE, 2). % 2 users simultaneously
 
 -record(state, {
     doc_id          :: term(), 
