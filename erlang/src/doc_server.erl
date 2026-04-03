@@ -70,6 +70,9 @@ init([DocId]) ->
     erlang:send_after(?SAVE_INTERVAL, self(), trigger_save),
     {ok, #state{doc_id = DocId, doc = InitialDoc, cursors = #{}, pid_users = #{}, op_count = 0, active = [], queue = []}}.
 
+handle_call(_Request, _From, State) ->
+    {reply, ok, State}.
+
 handle_cast({join, Pid}, State) ->
     erlang:monitor(process, Pid),
     ActiveCount = length(State#state.active),
