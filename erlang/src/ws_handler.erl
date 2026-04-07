@@ -17,7 +17,16 @@ websocket_init(State) ->
     io:format("Joined for document: ~p~n", [DocId]), 
     doc_registry:get_server(DocId),
     doc_server:join(DocId, self()),
-    {ok, State}.
+
+    %% Find the server's PID using the DocId and monitor it
+    case global:whereis_name({doc, DocId}) of
+        undefined ->
+            %% If it somehow doesn't exist (crashed), stop the websocket
+            {stop, State};
+        ServerPid ->
+            erlang:monitor(process, ServerPid),
+            {ok, State}
+    end.
 
 %% @doc Handles incoming frames from the client.
 %% Decodes JSON messages for actions like SYNCREQ, INSERT, DELETE, and MOVE.
@@ -92,5 +101,10 @@ websocket_info({sync_state, Doc, Cursors}, State) ->
         cursors => CursorJson
     },
     {reply, {text, jsx:encode(Resp)}, State};
+
+%% Used when the doc_server goes down
+websocket_info({'DOWN', _Ref, process, _Pid, _Reason}, State) ->
+    io:format("Doc server went down, closing websocket~n"),
+    {stop, State};
 
 websocket_info(_Info, State) -> {ok, State}.
