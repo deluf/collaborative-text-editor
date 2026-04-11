@@ -14,7 +14,7 @@ init(Req, _Opts) ->
 %% Joins the document session via the doc_registry and doc_server.
 websocket_init(State) ->
     DocId = maps:get(doc_id, State),
-    io:format("Joined for document: ~p~n", [DocId]), 
+    io:format("User connected to document: ~p~n", [DocId]), 
     doc_registry:get_server(DocId),
     doc_server:join(DocId, self()),
 
@@ -56,8 +56,7 @@ websocket_handle({text, Json}, State) ->
                 User = maps:get(<<"username">>, Map),
                 doc_server:move_cursor(DocId, self(), User, Id);
 
-            _ -> 
-                ok
+            _ -> ok
         end
     catch
         _:_ -> ok
@@ -70,10 +69,7 @@ websocket_handle(_Data, State) ->
 %% @doc Handles Erlang messages sent to the WebSocket process.
 %% Encodes internal messages (queue updates, inserts, deletes) into JSON for the client.
 websocket_info({queue_update, Pos}, State) ->
-    Resp = #{
-        action => <<"QUEUE">>,
-        position => Pos
-    },
+    Resp = #{action => <<"QUEUE">>, position => Pos},
     {reply, {text, jsx:encode(Resp)}, State};
 
 websocket_info({insert, Id, User, Char}, State) ->

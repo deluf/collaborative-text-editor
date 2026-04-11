@@ -1,18 +1,14 @@
-{application, collaborative_editor,
- [{description, "A collaborative editor backend"},
-  {vsn, "0.1.0"},
-  {registered, []},
-  {mod, {collaborative_editor_app, []}},
-  {applications,
-   [kernel,
-    stdlib,
-    cowboy,
-    jsx,
-    mnesia
-   ]},
-  {env,[]},
-  {modules, []},
-
-  {licenses, ["Apache-2.0"]},
-  {links, []}
- ]}.
+{application, collaborative_editor, [
+    {description, "A collaborative text editor back-end"},
+    {vsn, "0.0.0"},
+    % Entry point of the application
+    {mod, {collaborative_editor_app, []}},
+    % Which dependencies must be started before Erlang tries to run this application
+    {applications, [
+        kernel,
+        stdlib,
+        cowboy,
+        jsx,
+        mnesia
+    ]},
+]}.

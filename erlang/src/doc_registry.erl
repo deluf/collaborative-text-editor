@@ -1,4 +1,5 @@
 -module(doc_registry).
+
 -export([get_server/1]).
 
 %% @doc Retrieves the PID of a doc_server for a specific Document ID.
@@ -15,6 +16,5 @@ get_server(DocId) ->
                 {ok, Pid} -> Pid;
                 {error, {already_started, Pid}} -> Pid
             end;
-        Pid -> 
-            Pid
+        Pid -> Pid
     end.

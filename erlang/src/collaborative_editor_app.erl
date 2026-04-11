@@ -11,7 +11,6 @@ start(_StartType, _StartArgs) ->
     init_mnesia(),
 
     Port = application:get_env(collaborative_editor, http_port, 8086),
-
     Dispatch = cowboy_router:compile([
         {'_', [
             {"/:doc_id", ws_handler, []}
@@ -20,7 +19,8 @@ start(_StartType, _StartArgs) ->
 
     io:format("Starting server on port ~p...~n", [Port]),
 
-    {ok, _} = cowboy:start_clear(http_listener,
+    {ok, _} = cowboy:start_clear(
+        http_listener,
         [{port, Port}],
         #{env => #{dispatch => Dispatch}}
     ),
@@ -62,21 +62,21 @@ init_mnesia() ->
         {aborted, Reason} -> error(Reason)
     end,
 
-    case mnesia:create_table(editor_docs, [
-        {attributes, [doc_id, content]}, 
-        {disc_copies, [node()]} 
-    ]) of
-        {atomic, ok} -> 
-            ok;
+    case mnesia:create_table(
+        editor_docs, [
+            {attributes, [doc_id, content]}, 
+            {disc_copies, [node()]} 
+        ]) 
+    of
+        {atomic, ok} -> ok;
         {aborted, {already_exists, editor_docs}} -> 
             io:format("Table 'editor_docs' exists remotely. Creating local replica...~n"),
             case mnesia:add_table_copy(editor_docs, node(), disc_copies) of
                 {atomic, ok} -> ok;
                 {aborted, {already_exists, editor_docs, _}} -> ok;
-                {aborted, Error} -> error(Error)
+                {aborted, Reason} -> error(Reason)
             end;
-        {aborted, Error} -> 
-            error(Error)
+        {aborted, Reason} -> error(Reason)
     end,
     
     mnesia:wait_for_tables([editor_docs], infinity).
