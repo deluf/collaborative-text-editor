@@ -10,5 +10,5 @@
         cowboy,
         jsx,
         mnesia
-    ]},
+    ]}
 ]}.

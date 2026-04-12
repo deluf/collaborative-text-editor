@@ -74,9 +74,9 @@ init_mnesia() ->
             case mnesia:add_table_copy(editor_docs, node(), disc_copies) of
                 {atomic, ok} -> ok;
                 {aborted, {already_exists, editor_docs, _}} -> ok;
-                {aborted, Reason} -> error(Reason)
+                {aborted, Error} -> error(Error)
             end;
-        {aborted, Reason} -> error(Reason)
+        {aborted, Error} -> error(Error)
     end,
     
     mnesia:wait_for_tables([editor_docs], infinity).
